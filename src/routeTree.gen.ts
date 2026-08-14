@@ -11,10 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as BIdRouteImport } from './routes/b.$id'
 import { Route as BundlesIndexRouteImport } from './routes/bundles.index'
 import { Route as BundlesIdRouteImport } from './routes/bundles.$id'
 import { Route as BundlesNewRouteImport } from './routes/bundles.new'
+import { Route as TIdRouteImport } from './routes/t.$id'
 import { Route as WorkIndexRouteImport } from './routes/work.index'
 import { Route as WorkIdRouteImport } from './routes/work.$id'
 import { Route as WorkNewRouteImport } from './routes/work.new'
@@ -29,9 +32,19 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BIdRoute = BIdRouteImport.update({
+  id: '/b/$id',
+  path: '/b/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BundlesIndexRoute = BundlesIndexRouteImport.update({
@@ -47,6 +60,11 @@ const BundlesIdRoute = BundlesIdRouteImport.update({
 const BundlesNewRoute = BundlesNewRouteImport.update({
   id: '/bundles/new',
   path: '/bundles/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TIdRoute = TIdRouteImport.update({
+  id: '/t/$id',
+  path: '/t/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkIndexRoute = WorkIndexRouteImport.update({
@@ -68,9 +86,12 @@ const WorkNewRoute = WorkNewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
+  '/t/$id': typeof TIdRoute
   '/work/$id': typeof WorkIdRoute
   '/work/new': typeof WorkNewRoute
   '/bundles/': typeof BundlesIndexRoute
@@ -79,9 +100,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
+  '/t/$id': typeof TIdRoute
   '/work/$id': typeof WorkIdRoute
   '/work/new': typeof WorkNewRoute
   '/bundles': typeof BundlesIndexRoute
@@ -91,9 +115,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
+  '/t/$id': typeof TIdRoute
   '/work/$id': typeof WorkIdRoute
   '/work/new': typeof WorkNewRoute
   '/bundles/': typeof BundlesIndexRoute
@@ -104,9 +131,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/history'
     | '/login'
+    | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
+    | '/t/$id'
     | '/work/$id'
     | '/work/new'
     | '/bundles/'
@@ -115,9 +145,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dashboard'
+    | '/history'
     | '/login'
+    | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
+    | '/t/$id'
     | '/work/$id'
     | '/work/new'
     | '/bundles'
@@ -126,9 +159,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/history'
     | '/login'
+    | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
+    | '/t/$id'
     | '/work/$id'
     | '/work/new'
     | '/bundles/'
@@ -138,9 +174,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
+  BIdRoute: typeof BIdRoute
   BundlesIdRoute: typeof BundlesIdRoute
   BundlesNewRoute: typeof BundlesNewRoute
+  TIdRoute: typeof TIdRoute
   WorkIdRoute: typeof WorkIdRoute
   WorkNewRoute: typeof WorkNewRoute
   BundlesIndexRoute: typeof BundlesIndexRoute
@@ -163,11 +202,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/b/$id': {
+      id: '/b/$id'
+      path: '/b/$id'
+      fullPath: '/b/$id'
+      preLoaderRoute: typeof BIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bundles/': {
@@ -189,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/bundles/new'
       fullPath: '/bundles/new'
       preLoaderRoute: typeof BundlesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/t/$id': {
+      id: '/t/$id'
+      path: '/t/$id'
+      fullPath: '/t/$id'
+      preLoaderRoute: typeof TIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/work/': {
@@ -218,9 +278,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
+  BIdRoute: BIdRoute,
   BundlesIdRoute: BundlesIdRoute,
   BundlesNewRoute: BundlesNewRoute,
+  TIdRoute: TIdRoute,
   WorkIdRoute: WorkIdRoute,
   WorkNewRoute: WorkNewRoute,
   BundlesIndexRoute: BundlesIndexRoute,
