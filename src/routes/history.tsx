@@ -31,8 +31,31 @@ function HistoryPage() {
       <Tabs defaultValue="work">
         <TabsList>
           <TabsTrigger value="work">Work Tabs</TabsTrigger>
-          <TabsTrigger value="bundles">Bundle requests</TabsTrigger>
+          <TabsTrigger value="bundleTabs">Bundle Tabs</TabsTrigger>
+          <TabsTrigger value="bundles">Bundle Requests</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="bundleTabs" className="mt-4 space-y-3">
+          {db.bundles.map((b) => (
+            <Link
+              key={b.id}
+              to="/bundles/$id"
+              params={{ id: b.id }}
+              className="card-soft grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">{b.title}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {b.businessA.name} + {b.businessB.name} · created {formatDate(b.createdAt)}
+                </p>
+              </div>
+              <Badge variant={b.requests.length > 0 ? "default" : "secondary"}>
+                {b.requests.length} {b.requests.length === 1 ? "request" : "requests"}
+              </Badge>
+            </Link>
+          ))}
+          {db.bundles.length === 0 && <Empty text="No Bundle Tabs created yet." />}
+        </TabsContent>
 
         <TabsContent value="work" className="mt-4 space-y-3">
           {db.workTabs.map((t) => (

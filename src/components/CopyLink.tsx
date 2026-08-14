@@ -1,4 +1,4 @@
-import { Check, Copy, Link2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Link2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -27,6 +27,16 @@ export function CopyLink({ path, label = "Shareable link" }: { path: string; lab
       >
         {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
       </button>
+      <a
+        href={path}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Open guest view in a new tab"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-accent"
+      >
+        <ExternalLink className="h-4 w-4" />
+        <span className="hidden sm:inline">Open</span>
+      </a>
     </div>
   );
 }

@@ -186,18 +186,20 @@ function GuestWorkTab() {
             ) : claim.status === "submitted" ? (
               <div className="text-center">
                 <Clock className="mx-auto h-7 w-7 text-primary" />
-                <p className="mt-2 text-base font-bold text-foreground">Submitted for review</p>
+                <p className="mt-2 text-base font-bold text-foreground">Admin notified</p>
                 <p className="text-sm text-muted-foreground">
-                  The admin will release your payment once the work checks out.
+                  You told the admin the work is done. PartyTap doesn't verify completion — the
+                  admin releases payment when they're ready.
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 <p className="flex items-center gap-2 text-sm font-bold text-foreground">
-                  <Upload className="h-4 w-4 text-primary" /> Submit work
+                  <Upload className="h-4 w-4 text-primary" /> Mark work as done
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Complete the work outside PartyTap, then let the admin know it's ready.
+                  Work happens outside PartyTap. Submitting only notifies the admin that you
+                  finished — it isn't a verification.
                 </p>
                 <Textarea
                   rows={3}
@@ -206,11 +208,19 @@ function GuestWorkTab() {
                   onChange={(e) => setNote(e.target.value)}
                 />
                 <Button className="w-full" onClick={submitWork}>
-                  Submit work
+                  Submit work as done
                 </Button>
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={resetGuest}
+            className="mx-auto mt-4 block text-xs font-medium text-muted-foreground underline underline-offset-4"
+          >
+            Not you? View this link as a new guest
+          </button>
         </>
       )}
     </GuestShell>
