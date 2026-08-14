@@ -33,7 +33,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-surface">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-sidebar p-4 lg:flex">
-        <Link to="/dashboard" className="px-2 py-3">
+        <Link to="/" aria-label="PartyTap home" className="px-2 py-3">
           <Logo inverted />
         </Link>
         <nav className="mt-4 flex flex-1 flex-col gap-1">
@@ -63,7 +63,7 @@ export function AppShell({
         <header className="sticky top-0 z-20 border-b border-border bg-background/85 backdrop-blur lg:static lg:bg-transparent lg:backdrop-blur-none">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 sm:px-6 lg:py-8">
             <div className="min-w-0">
-              <Link to="/dashboard" className="lg:hidden">
+              <Link to="/" aria-label="PartyTap home" className="lg:hidden">
                 <Logo />
               </Link>
               <h1 className="mt-2 truncate text-xl font-bold text-foreground lg:mt-0 lg:text-3xl">

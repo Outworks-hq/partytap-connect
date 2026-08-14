@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
