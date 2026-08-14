@@ -8,7 +8,9 @@ export function GuestShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-surface hero-glow">
       <header className="border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5">
-          <Logo />
+          <Link to="/" aria-label="PartyTap home">
+            <Logo />
+          </Link>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <ShieldCheck className="h-4 w-4 text-primary" />
             Secure
