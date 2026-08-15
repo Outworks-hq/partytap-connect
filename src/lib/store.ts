@@ -2,8 +2,16 @@ import { useSyncExternalStore } from "react";
 
 export type DetailItem = { id: string; label: string; value: string };
 
+export type Account = {
+  id: string;
+  email: string;
+  password: string;
+  createdAt: string;
+};
+
 export type Claim = {
   id: string;
+  userId?: string;
   name: string;
   contact: string;
   acceptedAt: string;
@@ -27,6 +35,7 @@ export type WorkTab = {
 
 export type BundleRequest = {
   id: string;
+  userId?: string;
   name: string;
   phone: string;
   address: string;
@@ -53,6 +62,8 @@ export type DB = {
   balance: number;
   payoutConnected: boolean;
   signedIn: boolean;
+  accounts: Account[];
+  currentAccountId: string | null;
   workTabs: WorkTab[];
   bundles: BundleTab[];
 };
@@ -63,6 +74,8 @@ const seed: DB = {
   balance: 250,
   payoutConnected: true,
   signedIn: false,
+  accounts: [],
+  currentAccountId: null,
   workTabs: [
     {
       id: "abc123",
@@ -103,7 +116,7 @@ function read(): DB {
   if (typeof window === "undefined") return seed;
   try {
     const raw = window.localStorage.getItem(KEY);
-    cache = raw ? (JSON.parse(raw) as DB) : seed;
+    cache = raw ? ({ ...seed, ...(JSON.parse(raw) as Partial<DB>) } as DB) : seed;
   } catch {
     cache = seed;
   }
@@ -153,4 +166,88 @@ export function workStatus(t: WorkTab) {
   if (t.claims.some((c) => c.status === "submitted")) return "Submitted";
   if (t.claims.length >= t.slots) return "Claimed";
   return "Open";
+}
+
+/* ---------- PartyTap guest accounts (demo, local-only) ---------- */
+
+export function useAccount(): Account | null {
+  const db = useDB();
+  return db.accounts.find((a) => a.id === db.currentAccountId) ?? null;
+}
+
+export function authenticate(
+  email: string,
+  password: string,
+): { ok: true; account: Account } | { ok: false; error: string } {
+  const clean = email.trim().toLowerCase();
+  const db = read();
+  const existing = db.accounts.find((a) => a.email === clean);
+  if (existing) {
+    if (existing.password !== password) {
+      return { ok: false, error: "That password doesn't match this email." };
+    }
+    update((d) => ({ ...d, currentAccountId: existing.id }));
+    return { ok: true, account: existing };
+  }
+  if (password.length < 6) {
+    return { ok: false, error: "Password must be at least 6 characters." };
+  }
+  const account: Account = {
+    id: uid(8),
+    email: clean,
+    password,
+    createdAt: new Date().toISOString(),
+  };
+  update((d) => ({
+    ...d,
+    accounts: [...d.accounts, account],
+    currentAccountId: account.id,
+  }));
+  return { ok: true, account };
+}
+
+export function signOutAccount() {
+  update((d) => ({ ...d, currentAccountId: null }));
+}
+
+export function myWork(db: DB, accountId: string) {
+  return db.workTabs
+    .map((tab) => ({ tab, claim: tab.claims.find((c) => c.userId === accountId) }))
+    .filter((row): row is { tab: WorkTab; claim: Claim } => Boolean(row.claim));
+}
+
+export function myBundleRequests(db: DB, accountId: string) {
+  return db.bundles
+    .flatMap((bundle) => bundle.requests.map((request) => ({ bundle, request })))
+    .filter((row) => row.request.userId === accountId);
+}
+
+/* ---------- pending action across the auth round-trip ---------- */
+
+export type PendingAction =
+  | { kind: "work"; id: string; name: string; contact: string }
+  | { kind: "bundle"; id: string; form: Record<string, string> };
+
+const PENDING_KEY = "partytap.pending";
+
+export function setPending(action: PendingAction) {
+  try {
+    window.sessionStorage.setItem(PENDING_KEY, JSON.stringify(action));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function takePending(kind: PendingAction["kind"], id: string): PendingAction | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingAction;
+    if (parsed.kind !== kind || parsed.id !== id) return null;
+    window.sessionStorage.removeItem(PENDING_KEY);
+    return parsed;
+  } catch {
+    return null;
+  }
 }
