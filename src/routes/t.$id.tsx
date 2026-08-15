@@ -102,7 +102,18 @@ function GuestWorkTab() {
             },
       ),
     }));
-    toast.success("Work submitted for review");
+    toast.success("Admin notified that the work is done");
+  }
+
+  function resetGuest() {
+    const claims = myClaims();
+    delete claims[id];
+    window.localStorage.setItem(CLAIM_KEY, JSON.stringify(claims));
+    setClaimId(null);
+    setName("");
+    setContact("");
+    setNote("");
+    toast.success("Viewing as a new guest");
   }
 
   return (
