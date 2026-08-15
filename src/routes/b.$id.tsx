@@ -105,9 +105,17 @@ function GuestBundle() {
     <GuestShell>
       <div className="card-soft overflow-hidden">
         <div className="bg-accent p-5">
-          <p className="text-sm font-semibold text-accent-foreground">{bundle.businessA.name}</p>
-          <p className="text-sm font-semibold text-accent-foreground">+ {bundle.businessB.name}</p>
-          <h1 className="mt-2 text-xl font-extrabold text-foreground">{bundle.title}</h1>
+          <Badge variant="secondary">Bundle Tab</Badge>
+          <h1 className="mt-3 text-2xl font-extrabold text-foreground">{bundle.title}</h1>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-background px-3 py-1 text-xs font-semibold text-foreground">
+              {bundle.businessA.name}
+            </span>
+            <span className="text-xs font-bold text-muted-foreground">+</span>
+            <span className="rounded-full bg-background px-3 py-1 text-xs font-semibold text-foreground">
+              {bundle.businessB.name}
+            </span>
+          </div>
         </div>
         <div className="p-5">
           <p className="text-sm text-muted-foreground">{bundle.description}</p>
