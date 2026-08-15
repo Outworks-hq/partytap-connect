@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authenticate } from "@/lib/store";
 
-type AuthSearch = { next?: string; email?: string };
+type AuthSearch = { next?: string | undefined; email?: string | undefined };
 
 export const Route = createFileRoute("/account/auth")({
   validateSearch: (search: Record<string, unknown>): AuthSearch => ({
