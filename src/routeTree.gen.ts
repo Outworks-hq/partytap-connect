@@ -18,6 +18,7 @@ import { Route as BIdRouteImport } from './routes/b.$id'
 import { Route as BundlesIndexRouteImport } from './routes/bundles.index'
 import { Route as BundlesIdRouteImport } from './routes/bundles.$id'
 import { Route as BundlesNewRouteImport } from './routes/bundles.new'
+import { Route as MeWorkRouteImport } from './routes/me.work'
 import { Route as TIdRouteImport } from './routes/t.$id'
 import { Route as WorkIndexRouteImport } from './routes/work.index'
 import { Route as WorkIdRouteImport } from './routes/work.$id'
@@ -68,6 +69,11 @@ const BundlesNewRoute = BundlesNewRouteImport.update({
   path: '/bundles/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MeWorkRoute = MeWorkRouteImport.update({
+  id: '/me/work',
+  path: '/me/work',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TIdRoute = TIdRouteImport.update({
   id: '/t/$id',
   path: '/t/$id',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
+  '/me/work': typeof MeWorkRoute
   '/t/$id': typeof TIdRoute
   '/work/$id': typeof WorkIdRoute
   '/work/new': typeof WorkNewRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
+  '/me/work': typeof MeWorkRoute
   '/t/$id': typeof TIdRoute
   '/work/$id': typeof WorkIdRoute
   '/work/new': typeof WorkNewRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
+  '/me/work': typeof MeWorkRoute
   '/t/$id': typeof TIdRoute
   '/work/$id': typeof WorkIdRoute
   '/work/new': typeof WorkNewRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
+    | '/me/work'
     | '/t/$id'
     | '/work/$id'
     | '/work/new'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
+    | '/me/work'
     | '/t/$id'
     | '/work/$id'
     | '/work/new'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
+    | '/me/work'
     | '/t/$id'
     | '/work/$id'
     | '/work/new'
@@ -192,6 +204,7 @@ export interface RootRouteChildren {
   BIdRoute: typeof BIdRoute
   BundlesIdRoute: typeof BundlesIdRoute
   BundlesNewRoute: typeof BundlesNewRoute
+  MeWorkRoute: typeof MeWorkRoute
   TIdRoute: typeof TIdRoute
   WorkIdRoute: typeof WorkIdRoute
   WorkNewRoute: typeof WorkNewRoute
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BundlesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/me/work': {
+      id: '/me/work'
+      path: '/me/work'
+      fullPath: '/me/work'
+      preLoaderRoute: typeof MeWorkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/t/$id': {
       id: '/t/$id'
       path: '/t/$id'
@@ -304,6 +324,7 @@ const rootRouteChildren: RootRouteChildren = {
   BIdRoute: BIdRoute,
   BundlesIdRoute: BundlesIdRoute,
   BundlesNewRoute: BundlesNewRoute,
+  MeWorkRoute: MeWorkRoute,
   TIdRoute: TIdRoute,
   WorkIdRoute: WorkIdRoute,
   WorkNewRoute: WorkNewRoute,
