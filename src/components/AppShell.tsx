@@ -5,19 +5,25 @@ import {
   Briefcase,
   History as HistoryIcon,
   Wallet,
-  UserRound,
   LogOut,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
+import { ContextSwitch } from "./ContextSwitch";
 import { Button } from "@/components/ui/button";
 import { useDB, money, useAccount, signOutAccount } from "@/lib/store";
 
-const nav = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/work", label: "PartyTap Work", icon: Briefcase },
-  { to: "/bundles", label: "Bundles", icon: Layers },
-  { to: "/history", label: "History", icon: HistoryIcon },
+const businessNav = [
+  { to: "/dashboard", label: "Dashboard", short: "Dashboard", icon: LayoutDashboard },
+  { to: "/work", label: "PartyTap Work", short: "Work", icon: Briefcase },
+  { to: "/bundles", label: "Bundles", short: "Bundles", icon: Layers },
+  { to: "/history", label: "History", short: "History", icon: HistoryIcon },
+] as const;
+
+const personalNav = [
+  { to: "/me/work", label: "Work", short: "Work", icon: Briefcase },
+  { to: "/me/bundles", label: "Bundles", short: "Bundles", icon: Layers },
+  { to: "/me/history", label: "History", short: "History", icon: HistoryIcon },
 ] as const;
 
 export function AppShell({
@@ -25,15 +31,19 @@ export function AppShell({
   subtitle,
   action,
   children,
+  context = "business",
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
   children: ReactNode;
+  context?: "personal" | "business";
 }) {
   const db = useDB();
   const account = useAccount();
   const navigate = useNavigate();
+  const personal = context === "personal";
+  const nav = personal ? personalNav : businessNav;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -53,22 +63,27 @@ export function AppShell({
             </Link>
           ))}
         </nav>
-        <Link
-          to="/me/work"
-          className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-        >
-          <UserRound className="h-4 w-4 shrink-0" />
-          My PartyTap
-        </Link>
-        <div className="rounded-xl bg-sidebar-accent p-4 text-sidebar-foreground">
-          <p className="text-xs text-sidebar-foreground/60">Available Balance</p>
-          <p className="mt-1 text-2xl font-bold">{money(db.balance)}</p>
-          <p className="mt-3 text-xs text-sidebar-foreground/60">Payout Account</p>
-          <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-success">
-            <Wallet className="h-3.5 w-3.5" />
-            {db.payoutConnected ? "Connected (demo)" : "Not connected"}
-          </p>
-        </div>
+        {personal ? (
+          <div className="rounded-xl bg-sidebar-accent p-4 text-sidebar-foreground">
+            <p className="text-xs text-sidebar-foreground/60">Personal account</p>
+            <p className="mt-1 truncate text-sm font-medium">
+              {account ? account.email : "Not signed in"}
+            </p>
+            <p className="mt-3 text-xs text-sidebar-foreground/60">
+              Work Tabs and bundles you received.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl bg-sidebar-accent p-4 text-sidebar-foreground">
+            <p className="text-xs text-sidebar-foreground/60">Available Balance</p>
+            <p className="mt-1 text-2xl font-bold">{money(db.balance)}</p>
+            <p className="mt-3 text-xs text-sidebar-foreground/60">Payout Account</p>
+            <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-success">
+              <Wallet className="h-3.5 w-3.5" />
+              {db.payoutConnected ? "Connected (demo)" : "Not connected"}
+            </p>
+          </div>
+        )}
       </aside>
 
       <div className="lg:pl-64">
@@ -78,7 +93,8 @@ export function AppShell({
               <Link to="/" aria-label="PartyTap home" className="lg:hidden">
                 <Logo />
               </Link>
-              <h1 className="mt-2 truncate text-xl font-bold text-foreground lg:mt-0 lg:text-3xl">
+              <ContextSwitch context={context} className="mt-2" />
+              <h1 className="mt-2 truncate text-xl font-bold text-foreground lg:text-3xl">
                 {title}
               </h1>
               {subtitle && (
@@ -100,7 +116,7 @@ export function AppShell({
                 </Button>
               ) : (
                 <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-                  <Link to="/account/auth" search={{ next: "/dashboard" }}>
+                  <Link to="/account/auth" search={{ next: personal ? "/me/work" : "/dashboard" }}>
                     Sign in
                   </Link>
                 </Button>
@@ -113,7 +129,9 @@ export function AppShell({
         <main className="px-4 pb-28 sm:px-6 lg:pb-12">{children}</main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav
+        className={`fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-background pb-[env(safe-area-inset-bottom)] lg:hidden ${personal ? "grid-cols-3" : "grid-cols-4"}`}
+      >
         {nav.map((item) => (
           <Link
             key={item.to}
@@ -121,7 +139,7 @@ export function AppShell({
             className="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground data-[status=active]:text-primary"
           >
             <item.icon className="h-5 w-5" />
-            {item.label === "PartyTap Work" ? "Work" : item.label}
+            {item.short}
           </Link>
         ))}
       </nav>
