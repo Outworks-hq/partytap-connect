@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Lock, ShieldCheck } from "lucide-react";
+import { CircleUser, Lock } from "lucide-react";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 
@@ -11,10 +11,13 @@ export function GuestShell({ children }: { children: ReactNode }) {
           <Link to="/" aria-label="PartyTap home">
             <Logo />
           </Link>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Secure
-          </span>
+          <Link
+            to="/me/work"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground"
+          >
+            <CircleUser className="h-4 w-4 text-primary" />
+            My PartyTap
+          </Link>
         </div>
       </header>
       <main className="mx-auto max-w-2xl px-4 py-6 pb-16">{children}</main>
