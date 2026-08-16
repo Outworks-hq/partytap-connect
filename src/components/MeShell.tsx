@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Briefcase, History as HistoryIcon, Layers, LogOut } from "lucide-react";
+import { Briefcase, History as HistoryIcon, Layers, LayoutDashboard, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,12 @@ export function MeShell({
           <Link to="/" aria-label="PartyTap home">
             <Logo />
           </Link>
+          <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/dashboard">
+              <LayoutDashboard className="h-4 w-4" /> Business
+            </Link>
+          </Button>
           {account ? (
             <Button
               variant="ghost"
@@ -48,6 +54,7 @@ export function MeShell({
               </Link>
             </Button>
           )}
+          </div>
         </div>
       </header>
 

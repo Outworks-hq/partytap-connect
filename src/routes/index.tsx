@@ -51,7 +51,7 @@ function Landing() {
         <Logo />
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/login">Sign in</Link>
+            <Link to="/account/auth" search={{ next: "/dashboard" }}>Sign in</Link>
           </Button>
           <Button asChild size="sm">
             <Link to="/dashboard">Open dashboard</Link>
