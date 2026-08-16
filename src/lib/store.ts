@@ -186,7 +186,7 @@ export function authenticate(
     if (existing.password !== password) {
       return { ok: false, error: "That password doesn't match this email." };
     }
-    update((d) => ({ ...d, currentAccountId: existing.id }));
+    update((d) => ({ ...d, currentAccountId: existing.id, signedIn: true }));
     return { ok: true, account: existing };
   }
   if (password.length < 6) {
@@ -202,12 +202,13 @@ export function authenticate(
     ...d,
     accounts: [...d.accounts, account],
     currentAccountId: account.id,
+    signedIn: true,
   }));
   return { ok: true, account };
 }
 
 export function signOutAccount() {
-  update((d) => ({ ...d, currentAccountId: null }));
+  update((d) => ({ ...d, currentAccountId: null, signedIn: false }));
 }
 
 export function myWork(db: DB, accountId: string) {
