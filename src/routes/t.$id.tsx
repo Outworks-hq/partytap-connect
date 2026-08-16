@@ -203,7 +203,8 @@ function GuestWorkTab() {
                 Confirm & Accept
               </Button>
               <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <Lock className="h-3.5 w-3.5" /> You'll see the details after you accept.
+                <Lock className="h-3.5 w-3.5" /> You'll sign in to PartyTap, then the details
+                unlock.
               </p>
             </form>
           )}
@@ -266,6 +267,13 @@ function GuestWorkTab() {
               </div>
             )}
           </div>
+
+          <Link
+            to="/me/work"
+            className="mx-auto mt-4 block text-center text-sm font-semibold text-primary underline underline-offset-4"
+          >
+            View this in My PartyTap
+          </Link>
 
           <button
             type="button"
