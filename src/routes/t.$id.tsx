@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CheckCircle2, Clock, Lock, Unlock, Upload, Users, Wallet } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { GuestShell } from "@/components/GuestShell";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate, money, uid, update, useDB } from "@/lib/store";
+import {
+  formatDate,
+  money,
+  setPending,
+  takePending,
+  uid,
+  update,
+  useAccount,
+  useDB,
+} from "@/lib/store";
 
 export const Route = createFileRoute("/t/$id")({
   head: () => ({
@@ -36,32 +45,24 @@ function myClaims(): Record<string, string> {
 function GuestWorkTab() {
   const { id } = Route.useParams();
   const db = useDB();
+  const account = useAccount();
+  const navigate = useNavigate();
   const tab = db.workTabs.find((t) => t.id === id);
   const [claimId, setClaimId] = useState<string | null>(() => myClaims()[id] ?? null);
   const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+  const [contact, setContact] = useState(account?.email ?? "");
   const [note, setNote] = useState("");
+  const resumed = useRef(false);
 
-  if (!tab) {
-    return (
-      <GuestShell>
-        <div className="card-soft p-8 text-center">
-          <h1 className="text-lg font-bold text-foreground">This Work Tab doesn't exist</h1>
-          <p className="mt-1 text-sm text-muted-foreground">The link may have expired.</p>
-        </div>
-      </GuestShell>
-    );
-  }
+  const ownedClaim = account
+    ? db.workTabs.find((t) => t.id === id)?.claims.find((c) => c.userId === account.id)
+    : undefined;
 
-  const claim = tab.claims.find((c) => c.id === claimId);
-  const slotsLeft = tab.slots - tab.claims.length;
-
-  function accept(e: React.FormEvent) {
-    e.preventDefault();
+  function createClaim(payload: { name: string; contact: string; userId: string }) {
     const cid = uid();
-    update((db) => ({
-      ...db,
-      workTabs: db.workTabs.map((t) =>
+    update((d) => ({
+      ...d,
+      workTabs: d.workTabs.map((t) =>
         t.id !== id
           ? t
           : {
@@ -70,8 +71,9 @@ function GuestWorkTab() {
                 ...t.claims,
                 {
                   id: cid,
-                  name,
-                  contact,
+                  userId: payload.userId,
+                  name: payload.name,
+                  contact: payload.contact,
                   acceptedAt: new Date().toISOString(),
                   status: "accepted" as const,
                 },
@@ -86,6 +88,46 @@ function GuestWorkTab() {
     toast.success("Slot assigned — details unlocked");
   }
 
+  // Resume the accept the visitor started before signing in.
+  useEffect(() => {
+    if (!account || resumed.current) return;
+    const pending = takePending("work", id);
+    resumed.current = true;
+    if (pending && pending.kind === "work" && !ownedClaim) {
+      createClaim({ name: pending.name, contact: pending.contact, userId: account.id });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, id]);
+
+  if (!tab) {
+    return (
+      <GuestShell>
+        <div className="card-soft p-8 text-center">
+          <h1 className="text-lg font-bold text-foreground">This Work Tab doesn't exist</h1>
+          <p className="mt-1 text-sm text-muted-foreground">The link may have expired.</p>
+        </div>
+      </GuestShell>
+    );
+  }
+
+  const claim =
+    (account ? tab.claims.find((c) => c.userId === account.id) : undefined) ??
+    tab.claims.find((c) => c.id === claimId && !c.userId);
+  const slotsLeft = tab.slots - tab.claims.length;
+
+  function accept(e: React.FormEvent) {
+    e.preventDefault();
+    if (!account) {
+      setPending({ kind: "work", id, name, contact });
+      navigate({
+        to: "/account/auth",
+        search: { next: `/t/${id}`, email: contact.includes("@") ? contact : undefined },
+      });
+      return;
+    }
+    createClaim({ name, contact, userId: account.id });
+  }
+
   function submitWork() {
     update((db) => ({
       ...db,
@@ -95,7 +137,7 @@ function GuestWorkTab() {
           : {
               ...t,
               claims: t.claims.map((c) =>
-                c.id === claimId
+                c.id === claim?.id
                   ? { ...c, status: "submitted" as const, note, submittedAt: new Date().toISOString() }
                   : c,
               ),
@@ -161,7 +203,8 @@ function GuestWorkTab() {
                 Confirm & Accept
               </Button>
               <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <Lock className="h-3.5 w-3.5" /> You'll see the details after you accept.
+                <Lock className="h-3.5 w-3.5" /> You'll sign in to PartyTap, then the details
+                unlock.
               </p>
             </form>
           )}
@@ -224,6 +267,13 @@ function GuestWorkTab() {
               </div>
             )}
           </div>
+
+          <Link
+            to="/me/work"
+            className="mx-auto mt-4 block text-center text-sm font-semibold text-primary underline underline-offset-4"
+          >
+            View this in My PartyTap
+          </Link>
 
           <button
             type="button"

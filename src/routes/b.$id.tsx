@@ -1,12 +1,20 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CalendarDays, CheckCircle2, Clock, MapPin, Phone, User } from "lucide-react";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { CalendarDays, CheckCircle2, Clock, Mail, MapPin, Phone, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { GuestShell } from "@/components/GuestShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate, uid, update, useDB } from "@/lib/store";
+import {
+  formatDate,
+  setPending,
+  takePending,
+  uid,
+  update,
+  useAccount,
+  useDB,
+} from "@/lib/store";
 
 export const Route = createFileRoute("/b/$id")({
   head: () => ({
@@ -26,6 +34,8 @@ export const Route = createFileRoute("/b/$id")({
 function GuestBundle() {
   const { id } = Route.useParams();
   const db = useDB();
+  const account = useAccount();
+  const navigate = useNavigate();
   const bundle = db.bundles.find((b) => b.id === id);
   const [done, setDone] = useState<null | { name: string; date: string; time: string }>(null);
   const [form, setForm] = useState({
@@ -34,8 +44,50 @@ function GuestBundle() {
     address: "",
     date: "",
     time: "",
+    email: account?.email ?? "",
     notes: "",
   });
+  const resumed = useRef(false);
+
+  function createRequest(payload: typeof form, userId: string) {
+    update((d) => ({
+      ...d,
+      bundles: d.bundles.map((b) =>
+        b.id !== id
+          ? b
+          : {
+              ...b,
+              requests: [
+                {
+                  id: uid(),
+                  userId,
+                  name: payload.name,
+                  phone: payload.phone,
+                  address: payload.address,
+                  date: payload.date,
+                  time: payload.time,
+                  notes: payload.notes,
+                  createdAt: new Date().toISOString(),
+                  status: "new" as const,
+                },
+                ...b.requests,
+              ],
+            },
+      ),
+    }));
+    setDone({ name: payload.name, date: payload.date, time: payload.time });
+  }
+
+  // Resume the booking the customer started before signing in.
+  useEffect(() => {
+    if (!account || resumed.current) return;
+    const pending = takePending("bundle", id);
+    resumed.current = true;
+    if (pending && pending.kind === "bundle") {
+      createRequest(pending.form as typeof form, account.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, id]);
 
   if (!bundle) {
     return (
@@ -50,26 +102,15 @@ function GuestBundle() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    update((db) => ({
-      ...db,
-      bundles: db.bundles.map((b) =>
-        b.id !== id
-          ? b
-          : {
-              ...b,
-              requests: [
-                {
-                  id: uid(),
-                  ...form,
-                  createdAt: new Date().toISOString(),
-                  status: "new" as const,
-                },
-                ...b.requests,
-              ],
-            },
-      ),
-    }));
-    setDone({ name: form.name, date: form.date, time: form.time });
+    if (!account) {
+      setPending({ kind: "bundle", id, form });
+      navigate({
+        to: "/account/auth",
+        search: { next: `/b/${id}`, email: form.email || undefined },
+      });
+      return;
+    }
+    createRequest(form, account.id);
   }
 
   if (done) {
@@ -96,6 +137,12 @@ function GuestBundle() {
           <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" /> Each business will follow up directly.
           </p>
+          <Link
+            to="/me/bundles"
+            className="mt-4 inline-block text-sm font-semibold text-primary underline underline-offset-4"
+          >
+            View this in My PartyTap
+          </Link>
         </div>
       </GuestShell>
     );
@@ -143,6 +190,10 @@ function GuestBundle() {
                   onChange={(e) => setForm({ ...form, time: e.target.value })} />
               </IconField>
             </div>
+            <IconField icon={Mail}>
+              <Input type="email" placeholder="Email address" required value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </IconField>
             <Textarea rows={2} placeholder="Notes (optional)" value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })} />
 
