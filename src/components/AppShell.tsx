@@ -1,14 +1,17 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Layers,
   Briefcase,
   History as HistoryIcon,
   Wallet,
+  UserRound,
+  LogOut,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
-import { useDB, money } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { useDB, money, useAccount, signOutAccount } from "@/lib/store";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,6 +32,8 @@ export function AppShell({
   children: ReactNode;
 }) {
   const db = useDB();
+  const account = useAccount();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-surface">
@@ -48,6 +53,13 @@ export function AppShell({
             </Link>
           ))}
         </nav>
+        <Link
+          to="/me/work"
+          className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        >
+          <UserRound className="h-4 w-4 shrink-0" />
+          My PartyTap
+        </Link>
         <div className="rounded-xl bg-sidebar-accent p-4 text-sidebar-foreground">
           <p className="text-xs text-sidebar-foreground/60">Available Balance</p>
           <p className="mt-1 text-2xl font-bold">{money(db.balance)}</p>
@@ -73,7 +85,28 @@ export function AppShell({
                 <p className="truncate text-sm text-muted-foreground">{subtitle}</p>
               )}
             </div>
-            {action && <div className="shrink-0">{action}</div>}
+            <div className="flex shrink-0 items-center gap-2">
+              {account ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                  onClick={() => {
+                    signOutAccount();
+                    navigate({ to: "/" });
+                  }}
+                >
+                  <LogOut className="h-4 w-4" /> Sign out
+                </Button>
+              ) : (
+                <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+                  <Link to="/account/auth" search={{ next: "/dashboard" }}>
+                    Sign in
+                  </Link>
+                </Button>
+              )}
+              {action}
+            </div>
           </div>
         </header>
 
