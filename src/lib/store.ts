@@ -2,11 +2,26 @@ import { useSyncExternalStore } from "react";
 
 export type DetailItem = { id: string; label: string; value: string };
 
+export type AccountContext = "personal" | "business";
+
+export type PersonalSide = { createdAt: string; payoutConnected: boolean };
+export type BusinessSide = {
+  createdAt: string;
+  paymentConnected: boolean;
+  payoutConnected: boolean;
+};
+
 export type Account = {
   id: string;
   email: string;
+  phone?: string;
+  name?: string;
+  avatar?: string;
   password: string;
+  verified?: boolean;
   createdAt: string;
+  personal?: PersonalSide;
+  business?: BusinessSide;
 };
 
 export type Claim = {
@@ -64,6 +79,7 @@ export type DB = {
   signedIn: boolean;
   accounts: Account[];
   currentAccountId: string | null;
+  activeContext: AccountContext;
   workTabs: WorkTab[];
   bundles: BundleTab[];
 };
@@ -76,6 +92,7 @@ const seed: DB = {
   signedIn: false,
   accounts: [],
   currentAccountId: null,
+  activeContext: "business",
   workTabs: [
     {
       id: "abc123",
@@ -175,40 +192,192 @@ export function useAccount(): Account | null {
   return db.accounts.find((a) => a.id === db.currentAccountId) ?? null;
 }
 
-export function authenticate(
-  email: string,
-  password: string,
-): { ok: true; account: Account } | { ok: false; error: string } {
-  const clean = email.trim().toLowerCase();
+function newPersonal(): PersonalSide {
+  return { createdAt: new Date().toISOString(), payoutConnected: false };
+}
+
+function newBusiness(): BusinessSide {
+  return { createdAt: new Date().toISOString(), paymentConnected: false, payoutConnected: false };
+}
+
+/** Accounts created before contexts existed behave as personal + business. */
+export function accountSides(account: Account): AccountContext[] {
+  const sides: AccountContext[] = [];
+  if (account.personal) sides.push("personal");
+  if (account.business) sides.push("business");
+  if (sides.length === 0) return ["personal", "business"];
+  return sides;
+}
+
+export function hasSide(account: Account | null, context: AccountContext) {
+  return account ? accountSides(account).includes(context) : false;
+}
+
+export function useActiveContext(): AccountContext {
+  const db = useDB();
+  const account = useAccount();
+  if (!account) return db.activeContext;
+  const sides = accountSides(account);
+  if (sides.includes(db.activeContext)) return db.activeContext;
+  return sides[0] as AccountContext;
+}
+
+export function setActiveContext(context: AccountContext) {
+  update((d) => ({ ...d, activeContext: context }));
+}
+
+function normalize(identifier: string) {
+  return identifier.trim().toLowerCase();
+}
+
+function findAccount(db: DB, identifier: string) {
+  const clean = normalize(identifier);
+  return db.accounts.find((a) => a.email === clean || a.phone === clean);
+}
+
+export type AuthResult = { ok: true; account: Account } | { ok: false; error: string };
+
+/** Sign in only — never creates an account. */
+export function signIn(identifier: string, password: string): AuthResult {
   const db = read();
-  const existing = db.accounts.find((a) => a.email === clean);
-  if (existing) {
-    if (existing.password !== password) {
-      return { ok: false, error: "That password doesn't match this email." };
-    }
-    update((d) => ({ ...d, currentAccountId: existing.id, signedIn: true }));
-    return { ok: true, account: existing };
+  const existing = findAccount(db, identifier);
+  if (!existing) {
+    return { ok: false, error: "No PartyTap account uses that email or phone yet." };
   }
-  if (password.length < 6) {
+  if (existing.password !== password) {
+    return { ok: false, error: "That password doesn't match this account." };
+  }
+  const context = accountSides(existing)[0] as AccountContext;
+  update((d) => ({
+    ...d,
+    currentAccountId: existing.id,
+    signedIn: true,
+    activeContext: context,
+  }));
+  return { ok: true, account: existing };
+}
+
+export function signUp(input: {
+  identifier: string;
+  password: string;
+  name?: string;
+  context: AccountContext;
+}): AuthResult {
+  const clean = normalize(input.identifier);
+  const db = read();
+  if (findAccount(db, clean)) {
+    return { ok: false, error: "An account already uses that email or phone. Sign in instead." };
+  }
+  if (input.password.length < 6) {
     return { ok: false, error: "Password must be at least 6 characters." };
   }
+  const isPhone = !clean.includes("@");
   const account: Account = {
     id: uid(8),
-    email: clean,
-    password,
+    email: isPhone ? "" : clean,
+    ...(isPhone ? { phone: clean } : {}),
+    ...(input.name ? { name: input.name } : {}),
+    password: input.password,
+    verified: true,
     createdAt: new Date().toISOString(),
+    ...(input.context === "personal" ? { personal: newPersonal() } : { business: newBusiness() }),
   };
   update((d) => ({
     ...d,
     accounts: [...d.accounts, account],
     currentAccountId: account.id,
     signedIn: true,
+    activeContext: input.context,
   }));
   return { ok: true, account };
 }
 
+/**
+ * Recipient flow: someone accepting a Work Tab or confirming a Bundle.
+ * Signs in when the account exists, otherwise creates a Personal account.
+ */
+export function authenticate(identifier: string, password: string): AuthResult {
+  const db = read();
+  const existing = findAccount(db, identifier);
+  if (existing) {
+    const result = signIn(identifier, password);
+    if (!result.ok) return result;
+    if (!existing.personal) {
+      update((d) => ({
+        ...d,
+        accounts: d.accounts.map((a) =>
+          a.id === existing.id ? { ...a, personal: a.personal ?? newPersonal() } : a,
+        ),
+        activeContext: "personal",
+      }));
+    } else {
+      update((d) => ({ ...d, activeContext: "personal" }));
+    }
+    return { ok: true, account: read().accounts.find((a) => a.id === existing.id)! };
+  }
+  return signUp({ identifier, password, context: "personal" });
+}
+
+/** Add the other side of PartyTap to the signed-in identity. */
+export function addContext(context: AccountContext) {
+  update((d) => ({
+    ...d,
+    activeContext: context,
+    accounts: d.accounts.map((a) =>
+      a.id !== d.currentAccountId
+        ? a
+        : {
+            ...a,
+            ...(context === "personal"
+              ? { personal: a.personal ?? newPersonal() }
+              : { business: a.business ?? newBusiness() }),
+          },
+    ),
+  }));
+}
+
+export function updateProfile(patch: Partial<Pick<Account, "name" | "email" | "phone" | "avatar">>) {
+  update((d) => ({
+    ...d,
+    accounts: d.accounts.map((a) => (a.id === d.currentAccountId ? { ...a, ...patch } : a)),
+  }));
+}
+
+export function setConnection(
+  context: AccountContext,
+  key: "paymentConnected" | "payoutConnected",
+  value: boolean,
+) {
+  update((d) => ({
+    ...d,
+    payoutConnected: context === "business" && key === "payoutConnected" ? value : d.payoutConnected,
+    accounts: d.accounts.map((a) => {
+      if (a.id !== d.currentAccountId) return a;
+      if (context === "personal") {
+        const personal = a.personal ?? newPersonal();
+        return { ...a, personal: { ...personal, payoutConnected: value } };
+      }
+      const business = a.business ?? newBusiness();
+      return { ...a, business: { ...business, [key]: value } };
+    }),
+  }));
+}
+
+export function connectionState(account: Account | null, context: AccountContext) {
+  if (context === "personal") {
+    return {
+      paymentConnected: true,
+      payoutConnected: account?.personal?.payoutConnected ?? false,
+    };
+  }
+  return {
+    paymentConnected: account?.business?.paymentConnected ?? false,
+    payoutConnected: account?.business?.payoutConnected ?? false,
+  };
+}
+
 export function signOutAccount() {
-  update((d) => ({ ...d, currentAccountId: null, signedIn: false }));
+  update((d) => ({ ...d, currentAccountId: null, signedIn: false, activeContext: "business" }));
 }
 
 export function myWork(db: DB, accountId: string) {
