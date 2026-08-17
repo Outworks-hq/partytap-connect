@@ -15,9 +15,10 @@ export function MeShell({
   children: ReactNode;
 }) {
   return (
-    <AppShell context="personal" title={title} subtitle={subtitle} action={action}>
+    <AppShell context="personal" title={title} {...(subtitle ? { subtitle } : {})} {...(action ? { action } : {})}>
       {children}
     </AppShell>
+
   );
 }
 
