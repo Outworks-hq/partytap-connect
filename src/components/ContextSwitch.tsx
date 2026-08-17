@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { accountSides, setActiveContext, useAccount } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export function ContextSwitch({
@@ -8,8 +9,11 @@ export function ContextSwitch({
   context: "personal" | "business";
   className?: string;
 }) {
-  const base =
-    "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm";
+  const account = useAccount();
+  // Only a user with both sides of PartyTap sees the switch.
+  if (!account || accountSides(account).length < 2) return null;
+
+  const base = "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm";
   return (
     <div
       className={cn(
@@ -23,6 +27,7 @@ export function ContextSwitch({
         to="/me/work"
         role="tab"
         aria-selected={context === "personal"}
+        onClick={() => setActiveContext("personal")}
         className={cn(
           base,
           context === "personal"
@@ -36,6 +41,7 @@ export function ContextSwitch({
         to="/dashboard"
         role="tab"
         aria-selected={context === "business"}
+        onClick={() => setActiveContext("business")}
         className={cn(
           base,
           context === "business"
