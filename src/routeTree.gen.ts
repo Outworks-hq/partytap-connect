@@ -13,7 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as AccountAuthRouteImport } from './routes/account.auth'
+import { Route as AccountConnectRouteImport } from './routes/account.connect'
+import { Route as AccountSignupRouteImport } from './routes/account.signup'
 import { Route as BIdRouteImport } from './routes/b.$id'
 import { Route as BundlesIndexRouteImport } from './routes/bundles.index'
 import { Route as BundlesIdRouteImport } from './routes/bundles.$id'
@@ -46,9 +49,24 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountAuthRoute = AccountAuthRouteImport.update({
   id: '/account/auth',
   path: '/account/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountConnectRoute = AccountConnectRouteImport.update({
+  id: '/account/connect',
+  path: '/account/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountSignupRoute = AccountSignupRouteImport.update({
+  id: '/account/signup',
+  path: '/account/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BIdRoute = BIdRouteImport.update({
@@ -112,7 +130,10 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/settings': typeof SettingsRoute
   '/account/auth': typeof AccountAuthRoute
+  '/account/connect': typeof AccountConnectRoute
+  '/account/signup': typeof AccountSignupRoute
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
@@ -130,7 +151,10 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/settings': typeof SettingsRoute
   '/account/auth': typeof AccountAuthRoute
+  '/account/connect': typeof AccountConnectRoute
+  '/account/signup': typeof AccountSignupRoute
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
@@ -149,7 +173,10 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/settings': typeof SettingsRoute
   '/account/auth': typeof AccountAuthRoute
+  '/account/connect': typeof AccountConnectRoute
+  '/account/signup': typeof AccountSignupRoute
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
   '/bundles/new': typeof BundlesNewRoute
@@ -169,7 +196,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/login'
+    | '/settings'
     | '/account/auth'
+    | '/account/connect'
+    | '/account/signup'
     | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
@@ -187,7 +217,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/login'
+    | '/settings'
     | '/account/auth'
+    | '/account/connect'
+    | '/account/signup'
     | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
@@ -205,7 +238,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/login'
+    | '/settings'
     | '/account/auth'
+    | '/account/connect'
+    | '/account/signup'
     | '/b/$id'
     | '/bundles/$id'
     | '/bundles/new'
@@ -224,7 +260,10 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
+  SettingsRoute: typeof SettingsRoute
   AccountAuthRoute: typeof AccountAuthRoute
+  AccountConnectRoute: typeof AccountConnectRoute
+  AccountSignupRoute: typeof AccountSignupRoute
   BIdRoute: typeof BIdRoute
   BundlesIdRoute: typeof BundlesIdRoute
   BundlesNewRoute: typeof BundlesNewRoute
@@ -268,11 +307,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/auth': {
       id: '/account/auth'
       path: '/account/auth'
       fullPath: '/account/auth'
       preLoaderRoute: typeof AccountAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/connect': {
+      id: '/account/connect'
+      path: '/account/connect'
+      fullPath: '/account/connect'
+      preLoaderRoute: typeof AccountConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/signup': {
+      id: '/account/signup'
+      path: '/account/signup'
+      fullPath: '/account/signup'
+      preLoaderRoute: typeof AccountSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/b/$id': {
@@ -360,7 +420,10 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
+  SettingsRoute: SettingsRoute,
   AccountAuthRoute: AccountAuthRoute,
+  AccountConnectRoute: AccountConnectRoute,
+  AccountSignupRoute: AccountSignupRoute,
   BIdRoute: BIdRoute,
   BundlesIdRoute: BundlesIdRoute,
   BundlesNewRoute: BundlesNewRoute,
