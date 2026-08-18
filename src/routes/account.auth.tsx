@@ -1,28 +1,36 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authenticate } from "@/lib/store";
+import { accountSides, authenticate, signIn } from "@/lib/store";
 
-type AuthSearch = { next?: string | undefined; email?: string | undefined };
+type AuthSearch = {
+  next?: string | undefined;
+  email?: string | undefined;
+  recipient?: boolean | undefined;
+};
 
 export const Route = createFileRoute("/account/auth")({
   validateSearch: (search: Record<string, unknown>): AuthSearch => ({
     next: typeof search['next'] === "string" ? (search['next'] as string) : undefined,
     email: typeof search['email'] === "string" ? (search['email'] as string) : undefined,
+    recipient:
+      search['recipient'] === true || search['recipient'] === "true" || search['recipient'] === "1"
+        ? true
+        : undefined,
   }),
   head: () => ({
     meta: [
-      { title: "Your PartyTap account" },
+      { title: "Sign in to PartyTap" },
       {
         name: "description",
         content:
-          "Create or sign in to your PartyTap account to accept Work Tabs and confirm bundles.",
+          "Sign in to your PartyTap account with email or phone to manage Work Tabs, Bundles, and payments.",
       },
-      { property: "og:title", content: "Your PartyTap account" },
+      { property: "og:title", content: "Sign in to PartyTap" },
       { property: "og:description", content: "One account for Work Tabs and Bundles." },
     ],
   }),
@@ -30,46 +38,49 @@ export const Route = createFileRoute("/account/auth")({
 });
 
 function AccountAuth() {
-  const { next, email: prefill } = Route.useSearch();
+  const { next, email: prefill, recipient } = Route.useSearch();
   const navigate = useNavigate();
-  const [email, setEmail] = useState(prefill ?? "");
+  const [identifier, setIdentifier] = useState(prefill ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const result = authenticate(email, password);
+    // Recipients of a shared Work Tab / Bundle link get a Personal account created
+    // automatically — everyone else must already have a PartyTap account.
+    const result = recipient ? authenticate(identifier, password) : signIn(identifier, password);
     if (!result.ok) {
       setError(result.error);
       return;
     }
     toast.success("You're signed in to PartyTap");
-    const target = next && next.startsWith("/") ? next : "/me/work";
-    navigate({ to: target });
+    const fallback = accountSides(result.account)[0] === "business" ? "/dashboard" : "/me/work";
+    navigate({ to: next && next.startsWith("/") ? next : fallback });
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-surface hero-glow px-4">
+    <div className="grid min-h-screen place-items-center bg-surface hero-glow px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="flex justify-center">
           <Logo />
         </div>
         <form className="card-soft mt-6 space-y-4 p-6" onSubmit={submit}>
           <div>
-            <h1 className="text-xl font-bold text-foreground">Your PartyTap account</h1>
+            <h1 className="text-xl font-bold text-foreground">Sign in</h1>
             <p className="text-sm text-muted-foreground">
-              One account for Work Tabs and Bundles. New here? Enter an email and password to
-              create it instantly.
+              {recipient
+                ? "Sign in or create your PartyTap account to continue this tab."
+                : "One PartyTap account for your personal and business sides."}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="acct-email">Email</Label>
+            <Label htmlFor="acct-id">Email / Phone</Label>
             <Input
-              id="acct-email"
-              type="email"
+              id="acct-id"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -78,7 +89,7 @@ function AccountAuth() {
               id="acct-password"
               type="password"
               required
-              placeholder="At least 6 characters"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -87,8 +98,21 @@ function AccountAuth() {
           <Button type="submit" className="w-full">
             Continue
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Demo accounts are stored on this device only.
+          <p className="text-center text-xs font-semibold text-muted-foreground">
+            <Link
+              to="/account/signup"
+              search={{
+                ...(next ? { next } : {}),
+                ...(identifier.includes("@") ? { email: identifier } : {}),
+              }}
+              className="text-primary"
+            >
+              Sign Up
+            </Link>
+            <span className="px-2 text-muted-foreground">·</span>
+            <Link to="/account/connect" className="text-primary">
+              Connect
+            </Link>
           </p>
         </form>
       </div>
