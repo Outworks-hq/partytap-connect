@@ -5,13 +5,12 @@ import {
   Briefcase,
   History as HistoryIcon,
   Wallet,
-  LogOut,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Logo } from "./Logo";
 import { ContextSwitch } from "./ContextSwitch";
-import { Button } from "@/components/ui/button";
-import { useDB, money, useAccount, signOutAccount } from "@/lib/store";
+import { AccountMenu } from "./AccountMenu";
+import { useDB, money, useAccount, connectionState, hasSide } from "@/lib/store";
 
 const businessNav = [
   { to: "/dashboard", label: "Dashboard", short: "Dashboard", icon: LayoutDashboard },
@@ -44,6 +43,13 @@ export function AppShell({
   const navigate = useNavigate();
   const personal = context === "personal";
   const nav = personal ? personalNav : businessNav;
+  const connections = connectionState(account, context);
+
+  // A single-side account never lands on the side it doesn't have.
+  const wrongSide = Boolean(account) && !hasSide(account, context);
+  useEffect(() => {
+    if (wrongSide) navigate({ to: personal ? "/dashboard" : "/me/work", replace: true });
+  }, [wrongSide, personal, navigate]);
 
   return (
     <div className="min-h-screen bg-surface">
@@ -67,21 +73,29 @@ export function AppShell({
           <div className="rounded-xl bg-sidebar-accent p-4 text-sidebar-foreground">
             <p className="text-xs text-sidebar-foreground/60">Personal account</p>
             <p className="mt-1 truncate text-sm font-medium">
-              {account ? account.email : "Not signed in"}
+              {account ? account.email || account.phone : "Not signed in"}
             </p>
-            <p className="mt-3 text-xs text-sidebar-foreground/60">
-              Work Tabs and bundles you received.
-            </p>
+            <p className="mt-3 text-xs text-sidebar-foreground/60">Payout Account</p>
+            <Link
+              to="/settings"
+              className={`mt-1 flex items-center gap-1.5 text-sm font-medium ${connections.payoutConnected ? "text-success" : "text-sidebar-foreground/80 underline"}`}
+            >
+              <Wallet className="h-3.5 w-3.5" />
+              {connections.payoutConnected ? "Connected" : "Connect to get paid"}
+            </Link>
           </div>
         ) : (
           <div className="rounded-xl bg-sidebar-accent p-4 text-sidebar-foreground">
             <p className="text-xs text-sidebar-foreground/60">Available Balance</p>
             <p className="mt-1 text-2xl font-bold">{money(db.balance)}</p>
-            <p className="mt-3 text-xs text-sidebar-foreground/60">Payout Account</p>
-            <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-success">
+            <p className="mt-3 text-xs text-sidebar-foreground/60">Payment Method</p>
+            <Link
+              to="/settings"
+              className={`mt-1 flex items-center gap-1.5 text-sm font-medium ${connections.paymentConnected ? "text-success" : "text-sidebar-foreground/80 underline"}`}
+            >
               <Wallet className="h-3.5 w-3.5" />
-              {db.payoutConnected ? "Connected (demo)" : "Not connected"}
-            </p>
+              {connections.paymentConnected ? "Connected" : "Add a payment method"}
+            </Link>
           </div>
         )}
       </aside>
@@ -102,25 +116,7 @@ export function AppShell({
               )}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {account ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hidden sm:inline-flex"
-                  onClick={() => {
-                    signOutAccount();
-                    navigate({ to: "/" });
-                  }}
-                >
-                  <LogOut className="h-4 w-4" /> Sign out
-                </Button>
-              ) : (
-                <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-                  <Link to="/account/auth" search={{ next: personal ? "/me/work" : "/dashboard" }}>
-                    Sign in
-                  </Link>
-                </Button>
-              )}
+              <AccountMenu signInNext={personal ? "/me/work" : "/dashboard"} />
               {action}
             </div>
           </div>
