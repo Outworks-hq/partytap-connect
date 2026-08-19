@@ -30,10 +30,6 @@ export const Route = createFileRoute("/account/signup")({
   component: SignupPage,
 });
 
-function code() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
 function SignupPage() {
   const { next, email: prefill } = Route.useSearch();
   const navigate = useNavigate();
@@ -42,36 +38,26 @@ function SignupPage() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState<string | null>(null);
-  const [entered, setEntered] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function startVerify(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!identifier.trim()) return setError("Enter your email or phone.");
     if (password.length < 6) return setError("Password must be at least 6 characters.");
-    const c = code();
-    setSent(c);
-    toast.info(`Verification code sent: ${c}`);
-  }
-
-  async function verify(e: React.FormEvent) {
-    e.preventDefault();
-    if (entered.trim() !== sent) {
-      setError("That code doesn't match. Check the code we sent.");
-      return;
-    }
+    setSubmitting(true);
     const result = await signUp({ identifier, password, name, context: context! });
+    setSubmitting(false);
     if (!result.ok) {
       setError(result.error);
-      setSent(null);
       return;
     }
-    toast.success("Your PartyTap account is ready");
+    toast.success("Check your email to confirm your account");
     const target =
       next && next.startsWith("/") ? next : context === "business" ? "/dashboard" : "/me/work";
     navigate({ to: target });
   }
+
   return (
     <div className="grid min-h-screen place-items-center bg-surface hero-glow px-4 py-10">
       <div className="w-full max-w-sm">
@@ -104,8 +90,8 @@ function SignupPage() {
           </div>
         )}
 
-        {context && !sent && (
-          <form className="card-soft mt-6 space-y-4 p-6" onSubmit={startVerify}>
+        {context && (
+          <form className="card-soft mt-6 space-y-4 p-6" onSubmit={submit}>
             <div>
               <h1 className="text-xl font-bold text-foreground capitalize">
                 {context} account
@@ -143,45 +129,9 @@ function SignupPage() {
               />
             </div>
             {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-            <Button type="submit" className="w-full">
-              Continue
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Creating account..." : "Create account"}
             </Button>
-          </form>
-        )}
-
-        {context && sent && (
-          <form className="card-soft mt-6 space-y-4 p-6" onSubmit={verify}>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Verify {identifier}</h1>
-              <p className="text-sm text-muted-foreground">
-                Enter the 6-digit code we sent you.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="su-code">Verification code</Label>
-              <Input
-                id="su-code"
-                inputMode="numeric"
-                required
-                value={entered}
-                onChange={(e) => setEntered(e.target.value)}
-              />
-            </div>
-            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-            <Button type="submit" className="w-full">
-              Verify & create account
-            </Button>
-            <button
-              type="button"
-              className="w-full text-center text-xs font-semibold text-primary"
-              onClick={() => {
-                const c = code();
-                setSent(c);
-                toast.info(`Verification code sent: ${c}`);
-              }}
-            >
-              Resend code
-            </button>
           </form>
         )}
       </div>
