@@ -36,9 +36,9 @@ function ConnectPage() {
       <Shell>
         <form
           className="card-soft mt-6 space-y-4 p-6"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            const result = signIn(identifier, password);
+            const result = await signIn(identifier, password);
             if (!result.ok) return setError(result.error);
             setError(null);
           }}
@@ -122,8 +122,8 @@ function ConnectPage() {
             </div>
             <Button
               className="w-full"
-              onClick={() => {
-                addContext(missing);
+              onClick={async () => {
+                await addContext(missing);
                 toast.success(`${missing === "business" ? "Business" : "Personal"} side added`);
                 navigate({ to: missing === "business" ? "/dashboard" : "/me/work" });
               }}

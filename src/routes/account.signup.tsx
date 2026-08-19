@@ -55,13 +55,13 @@ function SignupPage() {
     toast.info(`Verification code sent: ${c}`);
   }
 
-  function verify(e: React.FormEvent) {
+  async function verify(e: React.FormEvent) {
     e.preventDefault();
     if (entered.trim() !== sent) {
       setError("That code doesn't match. Check the code we sent.");
       return;
     }
-    const result = signUp({ identifier, password, name, context: context! });
+    const result = await signUp({ identifier, password, name, context: context! });
     if (!result.ok) {
       setError(result.error);
       setSent(null);
@@ -72,7 +72,6 @@ function SignupPage() {
       next && next.startsWith("/") ? next : context === "business" ? "/dashboard" : "/me/work";
     navigate({ to: target });
   }
-
   return (
     <div className="grid min-h-screen place-items-center bg-surface hero-glow px-4 py-10">
       <div className="w-full max-w-sm">

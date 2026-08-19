@@ -84,8 +84,8 @@ export function AccountMenu({ signInNext = "/dashboard" }: { signInNext?: string
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onSelect={() => {
-            signOutAccount();
+          onSelect={async () => {
+            await signOutAccount();
             navigate({ to: "/" });
           }}
         >

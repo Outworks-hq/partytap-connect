@@ -44,11 +44,13 @@ function AccountAuth() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     // Recipients of a shared Work Tab / Bundle link get a Personal account created
     // automatically — everyone else must already have a PartyTap account.
-    const result = recipient ? authenticate(identifier, password) : signIn(identifier, password);
+    const result = recipient
+      ? await authenticate(identifier, password)
+      : await signIn(identifier, password);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -57,7 +59,6 @@ function AccountAuth() {
     const fallback = accountSides(result.account)[0] === "business" ? "/dashboard" : "/me/work";
     navigate({ to: next && next.startsWith("/") ? next : fallback });
   }
-
   return (
     <div className="grid min-h-screen place-items-center bg-surface hero-glow px-4 py-10">
       <div className="w-full max-w-sm">

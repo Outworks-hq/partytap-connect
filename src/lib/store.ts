@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-
+import { supabase } from "@/lib/supabase";
 export type DetailItem = { id: string; label: string; value: string };
 
 export type AccountContext = "personal" | "business";
@@ -150,6 +150,54 @@ function write(next: DB) {
   listeners.forEach((l) => l());
 }
 
+async function syncProfileToCache(userId: string) {
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  if (!profile) return;
+
+  const account: Account = {
+    id: profile.id,
+    email: profile.email ?? "",
+    phone: profile.phone ?? undefined,
+    name: profile.name ?? undefined,
+    avatar: profile.avatar ?? undefined,
+    password: "",
+    verified: true,
+    createdAt: profile.created_at,
+    ...(profile.has_personal
+      ? { personal: { createdAt: profile.created_at, payoutConnected: profile.personal_payout_connected } }
+      : {}),
+    ...(profile.has_business
+      ? {
+          business: {
+            createdAt: profile.created_at,
+            paymentConnected: profile.business_payment_connected,
+            payoutConnected: profile.business_payout_connected,
+          },
+        }
+      : {}),
+  };
+
+  update((d) => {
+    const others = d.accounts.filter((a) => a.id !== account.id);
+    return {
+      ...d,
+      accounts: [...others, account],
+      currentAccountId: account.id,
+      signedIn: true,
+    };
+  });
+}
+
+if (typeof window !== "undefined") {
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      syncProfileToCache(session.user.id);
+    } else if (event === "SIGNED_OUT") {
+      update((d) => ({ ...d, currentAccountId: null, signedIn: false }));
+    }
+  });
+}
+
 export function update(fn: (db: DB) => DB) {
   write(fn(read()));
 }
@@ -237,58 +285,97 @@ function findAccount(db: DB, identifier: string) {
 
 export type AuthResult = { ok: true; account: Account } | { ok: false; error: string };
 
-/** Sign in only — never creates an account. */
-export function signIn(identifier: string, password: string): AuthResult {
-  const db = read();
-  const existing = findAccount(db, identifier);
-  if (!existing) {
-    return { ok: false, error: "No PartyTap account uses that email or phone yet." };
+export async function signIn(identifier: string, password: string): Promise<AuthResult> {
+  const clean = normalize(identifier);
+  const isPhone = !clean.includes("@");
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: isPhone ? undefined : clean,
+    phone: isPhone ? clean : undefined,
+    password,
+  });
+
+  if (error) return { ok: false, error: error.message };
+  if (!data.user) return { ok: false, error: "Sign in failed. Try again." };
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", data.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return { ok: false, error: "Could not load account profile." };
   }
-  if (existing.password !== password) {
-    return { ok: false, error: "That password doesn't match this account." };
-  }
-  const context = accountSides(existing)[0] as AccountContext;
-  update((d) => ({
-    ...d,
-    currentAccountId: existing.id,
-    signedIn: true,
-    activeContext: context,
-  }));
-  return { ok: true, account: existing };
+
+  const account: Account = {
+    id: profile.id,
+    email: profile.email ?? "",
+    phone: profile.phone ?? undefined,
+    name: profile.name ?? undefined,
+    avatar: profile.avatar ?? undefined,
+    password: "",
+    verified: true,
+    createdAt: profile.created_at,
+    ...(profile.has_personal
+      ? { personal: { createdAt: profile.created_at, payoutConnected: profile.personal_payout_connected } }
+      : {}),
+    ...(profile.has_business
+      ? {
+          business: {
+            createdAt: profile.created_at,
+            paymentConnected: profile.business_payment_connected,
+            payoutConnected: profile.business_payout_connected,
+          },
+        }
+      : {}),
+  };
+
+  return { ok: true, account };
 }
 
-export function signUp(input: {
+export async function signUp(input: {
   identifier: string;
   password: string;
   name?: string;
   context: AccountContext;
-}): AuthResult {
+}): Promise<AuthResult> {
   const clean = normalize(input.identifier);
-  const db = read();
-  if (findAccount(db, clean)) {
-    return { ok: false, error: "An account already uses that email or phone. Sign in instead." };
-  }
-  if (input.password.length < 6) {
-    return { ok: false, error: "Password must be at least 6 characters." };
-  }
   const isPhone = !clean.includes("@");
+
+  const { data, error } = await supabase.auth.signUp({
+    email: isPhone ? undefined : clean,
+    phone: isPhone ? clean : undefined,
+    password: input.password,
+  });
+
+  if (error) return { ok: false, error: error.message };
+  if (!data.user) return { ok: false, error: "Sign up failed. Try again." };
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({
+      name: input.name ?? null,
+      has_personal: input.context === "personal",
+      has_business: input.context === "business",
+    })
+    .eq("id", data.user.id);
+
+  if (profileError) return { ok: false, error: profileError.message };
+
+  if (profileError) return { ok: false, error: profileError.message };
+
   const account: Account = {
-    id: uid(8),
+    id: data.user.id,
     email: isPhone ? "" : clean,
     ...(isPhone ? { phone: clean } : {}),
     ...(input.name ? { name: input.name } : {}),
-    password: input.password,
+    password: "",
     verified: true,
     createdAt: new Date().toISOString(),
     ...(input.context === "personal" ? { personal: newPersonal() } : { business: newBusiness() }),
   };
-  update((d) => ({
-    ...d,
-    accounts: [...d.accounts, account],
-    currentAccountId: account.id,
-    signedIn: true,
-    activeContext: input.context,
-  }));
+
   return { ok: true, account };
 }
 
@@ -296,70 +383,60 @@ export function signUp(input: {
  * Recipient flow: someone accepting a Work Tab or confirming a Bundle.
  * Signs in when the account exists, otherwise creates a Personal account.
  */
-export function authenticate(identifier: string, password: string): AuthResult {
-  const db = read();
-  const existing = findAccount(db, identifier);
-  if (existing) {
-    const result = signIn(identifier, password);
-    if (!result.ok) return result;
-    if (!existing.personal) {
-      update((d) => ({
-        ...d,
-        accounts: d.accounts.map((a) =>
-          a.id === existing.id ? { ...a, personal: a.personal ?? newPersonal() } : a,
-        ),
-        activeContext: "personal",
-      }));
-    } else {
-      update((d) => ({ ...d, activeContext: "personal" }));
+export async function authenticate(identifier: string, password: string): Promise<AuthResult> {
+  const signInResult = await signIn(identifier, password);
+  if (signInResult.ok) {
+    if (!signInResult.account.personal) {
+      await addContext("personal");
+      const refreshed = await signIn(identifier, password);
+      return refreshed;
     }
-    return { ok: true, account: read().accounts.find((a) => a.id === existing.id)! };
+    setActiveContext("personal");
+    return signInResult;
   }
   return signUp({ identifier, password, context: "personal" });
 }
 
 /** Add the other side of PartyTap to the signed-in identity. */
-export function addContext(context: AccountContext) {
-  update((d) => ({
-    ...d,
-    activeContext: context,
-    accounts: d.accounts.map((a) =>
-      a.id !== d.currentAccountId
-        ? a
-        : {
-            ...a,
-            ...(context === "personal"
-              ? { personal: a.personal ?? newPersonal() }
-              : { business: a.business ?? newBusiness() }),
-          },
-    ),
-  }));
+export async function addContext(context: AccountContext) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  await supabase
+    .from("profiles")
+    .update(context === "personal" ? { has_personal: true } : { has_business: true })
+    .eq("id", userData.user.id);
+
+  update((d) => ({ ...d, activeContext: context }));
 }
 
-export function updateProfile(patch: Partial<Pick<Account, "name" | "email" | "phone" | "avatar">>) {
-  update((d) => ({
-    ...d,
-    accounts: d.accounts.map((a) => (a.id === d.currentAccountId ? { ...a, ...patch } : a)),
-  }));
+export async function updateProfile(patch: Partial<Pick<Account, "name" | "email" | "phone" | "avatar">>) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  await supabase.from("profiles").update(patch).eq("id", userData.user.id);
 }
 
-export function setConnection(
+export async function setConnection(
   context: AccountContext,
   key: "paymentConnected" | "payoutConnected",
   value: boolean,
 ) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  const column =
+    context === "personal"
+      ? "personal_payout_connected"
+      : key === "paymentConnected"
+        ? "business_payment_connected"
+        : "business_payout_connected";
+
+  await supabase.from("profiles").update({ [column]: value }).eq("id", userData.user.id);
+
   update((d) => ({
     ...d,
     payoutConnected: context === "business" && key === "payoutConnected" ? value : d.payoutConnected,
-    accounts: d.accounts.map((a) => {
-      if (a.id !== d.currentAccountId) return a;
-      if (context === "personal") {
-        const personal = a.personal ?? newPersonal();
-        return { ...a, personal: { ...personal, payoutConnected: value } };
-      }
-      const business = a.business ?? newBusiness();
-      return { ...a, business: { ...business, [key]: value } };
-    }),
   }));
 }
 
@@ -376,7 +453,8 @@ export function connectionState(account: Account | null, context: AccountContext
   };
 }
 
-export function signOutAccount() {
+export async function signOutAccount() {
+  await supabase.auth.signOut();
   update((d) => ({ ...d, currentAccountId: null, signedIn: false, activeContext: "business" }));
 }
 
