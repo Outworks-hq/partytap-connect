@@ -1,12 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Empty } from "./dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useDB, money, formatDate, workStatus } from "@/lib/store";
+import { accountSides, getAuthedAccount, useDB, money, formatDate, workStatus } from "@/lib/store";
 
 export const Route = createFileRoute("/work/")({
+  beforeLoad: async ({ location }) => {
+    const account = await getAuthedAccount();
+    if (!account) {
+      throw redirect({ to: "/account/auth", search: { next: location.pathname } });
+    }
+    if (!accountSides(account).includes("business")) {
+      throw redirect({ to: "/account/connect" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "PartyTap Work — Work Tabs" },

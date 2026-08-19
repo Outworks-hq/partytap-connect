@@ -1,12 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Empty } from "./dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useDB } from "@/lib/store";
+import { accountSides, getAuthedAccount, useDB } from "@/lib/store";
 
 export const Route = createFileRoute("/bundles/")({
+  beforeLoad: async ({ location }) => {
+    const account = await getAuthedAccount();
+    if (!account) {
+      throw redirect({ to: "/account/auth", search: { next: location.pathname } });
+    }
+    if (!accountSides(account).includes("business")) {
+      throw redirect({ to: "/account/connect" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Bundles — PartyTap" },

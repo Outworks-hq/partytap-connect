@@ -233,6 +233,45 @@ export function workStatus(t: WorkTab) {
   return "Open";
 }
 
+
+export async function getAuthedAccount(): Promise<Account | null> {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session?.user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", data.session.user.id)
+    .single();
+
+  if (!profile) return null;
+
+  const account: Account = {
+    id: profile.id,
+    email: profile.email ?? "",
+    phone: profile.phone ?? undefined,
+    name: profile.name ?? undefined,
+    avatar: profile.avatar ?? undefined,
+    password: "",
+    verified: true,
+    createdAt: profile.created_at,
+    ...(profile.has_personal
+      ? { personal: { createdAt: profile.created_at, payoutConnected: profile.personal_payout_connected } }
+      : {}),
+    ...(profile.has_business
+      ? {
+          business: {
+            createdAt: profile.created_at,
+            paymentConnected: profile.business_payment_connected,
+            payoutConnected: profile.business_payout_connected,
+          },
+        }
+      : {}),
+  };
+
+  return account;
+}
+
 /* ---------- PartyTap guest accounts (demo, local-only) ---------- */
 
 export function useAccount(): Account | null {

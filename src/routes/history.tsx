@@ -1,11 +1,20 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Empty } from "./dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDate, money, useDB, workStatus } from "@/lib/store";
+import { accountSides, formatDate, getAuthedAccount, money, useDB, workStatus } from "@/lib/store";
 
 export const Route = createFileRoute("/history")({
+  beforeLoad: async ({ location }) => {
+    const account = await getAuthedAccount();
+    if (!account) {
+      throw redirect({ to: "/account/auth", search: { next: location.pathname } });
+    }
+    if (!accountSides(account).includes("business")) {
+      throw redirect({ to: "/account/connect" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "History — PartyTap" },

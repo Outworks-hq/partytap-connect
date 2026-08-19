@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { DollarSign, Eye, Lock, Plus, Trash2, Wallet } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -7,9 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { money, uid, update, useDB, type DetailItem } from "@/lib/store";
+import { accountSides, getAuthedAccount, money, uid, update, useDB, type DetailItem } from "@/lib/store";
 
 export const Route = createFileRoute("/work/new")({
+  beforeLoad: async ({ location }) => {
+    const account = await getAuthedAccount();
+    if (!account) {
+      throw redirect({ to: "/account/auth", search: { next: location.pathname } });
+    }
+    if (!accountSides(account).includes("business")) {
+      throw redirect({ to: "/account/connect" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Create a Work Tab — PartyTap Work" },
