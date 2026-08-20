@@ -397,9 +397,6 @@ export async function signUp(input: {
   if (error) return { ok: false, error: error.message };
   if (!data.user) return { ok: false, error: "Sign up failed. Try again." };
 
-
-  if (profileError) return { ok: false, error: profileError.message };
-
   const account: Account = {
     id: data.user.id,
     email: isPhone ? "" : clean,
