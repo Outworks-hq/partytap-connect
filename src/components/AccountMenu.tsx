@@ -42,14 +42,14 @@ export function AccountAvatar({
   );
 }
 
-export function AccountMenu({ signInNext = "/dashboard" }: { signInNext?: string }) {
+export function AccountMenu({ signInNext }: { signInNext?: string }) {
   const account = useAccount();
   const navigate = useNavigate();
 
   if (!account) {
     return (
       <Button asChild variant="ghost" size="sm">
-        <Link to="/account/auth" search={{ next: signInNext }}>
+        <Link to="/account/auth" search={signInNext ? { next: signInNext } : {}}>
           <UserRound className="h-4 w-4" /> Sign in
         </Link>
       </Button>

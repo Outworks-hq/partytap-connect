@@ -189,6 +189,10 @@ async function syncProfileToCache(userId: string) {
 }
 
 if (typeof window !== "undefined") {
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session?.user) syncProfileToCache(data.session.user.id);
+  });
+
   supabase.auth.onAuthStateChange((event, session) => {
     if (session?.user) {
       syncProfileToCache(session.user.id);
@@ -439,6 +443,7 @@ export async function addContext(context: AccountContext) {
     .update(context === "personal" ? { has_personal: true } : { has_business: true })
     .eq("id", userData.user.id);
 
+  await syncProfileToCache(userData.user.id);
   update((d) => ({ ...d, activeContext: context }));
 }
 
