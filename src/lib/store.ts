@@ -326,7 +326,9 @@ function findAccount(db: DB, identifier: string) {
   return db.accounts.find((a) => a.email === clean || a.phone === clean);
 }
 
-export type AuthResult = { ok: true; account: Account } | { ok: false; error: string };
+export type AuthResult =
+  | { ok: true; account: Account; newAccount?: boolean }
+  | { ok: false; error: string };
 
 export async function signIn(identifier: string, password: string): Promise<AuthResult> {
   const clean = normalize(identifier);
@@ -399,6 +401,25 @@ export async function signUp(input: {
   });
 
   if (error) return { ok: false, error: error.message };
+
+  const alreadyExists = !!data.user && (!data.user.identities || data.user.identities.length === 0);
+
+  if (alreadyExists) {
+    const signInResult = await signIn(input.identifier, input.password);
+    if (!signInResult.ok) {
+      return { ok: false, error: "An account with this email already exists. Please sign in instead." };
+    }
+    const sides = accountSides(signInResult.account);
+    if (sides.includes(input.context)) {
+      await signOutAccount();
+      return {
+        ok: false,
+        error: `An account with this email already has a ${input.context} side. Please sign in instead.`,
+      };
+    }
+    return { ok: true, account: signInResult.account, newAccount: false };
+  }
+
   if (!data.user) return { ok: false, error: "Sign up failed. Try again." };
 
   const account: Account = {
@@ -412,7 +433,7 @@ export async function signUp(input: {
     ...(input.context === "personal" ? { personal: newPersonal() } : { business: newBusiness() }),
   };
 
-  return { ok: true, account };
+  return { ok: true, account, newAccount: true };
 }
 
 /**

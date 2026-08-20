@@ -53,6 +53,11 @@ function SignupPage() {
       setError(result.error);
       return;
     }
+    if (result.newAccount === false) {
+      toast.success(`Signed in — let's connect your ${context} side`);
+      navigate({ to: "/account/connect" });
+      return;
+    }
     toast.success("Check your email to confirm your account");
     setDone(true);
   }
