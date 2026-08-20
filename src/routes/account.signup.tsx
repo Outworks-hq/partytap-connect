@@ -39,6 +39,7 @@ function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,9 +54,7 @@ function SignupPage() {
       return;
     }
     toast.success("Check your email to confirm your account");
-    const target =
-      next && next.startsWith("/") ? next : context === "business" ? "/dashboard" : "/me/work";
-    navigate({ to: target });
+    setDone(true);
   }
 
   return (
@@ -90,7 +89,22 @@ function SignupPage() {
           </div>
         )}
 
-        {context && (
+        {context && done && (
+          <div className="card-soft mt-6 space-y-3 p-6 text-center">
+            <h1 className="text-xl font-bold text-foreground">Check your email</h1>
+            <p className="text-sm text-muted-foreground">
+              We sent a confirmation link to <strong>{identifier}</strong>. Click it to activate
+              your account, then sign in.
+            </p>
+            <Button asChild className="mt-2 w-full">
+              <Link to="/account/auth" search={{ next: next ?? undefined }}>
+                Go to sign in
+              </Link>
+            </Button>
+          </div>
+        )}
+
+        {context && !done && (
           <form className="card-soft mt-6 space-y-4 p-6" onSubmit={submit}>
             <div>
               <h1 className="text-xl font-bold text-foreground capitalize">
