@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
+import { AccountMenu } from "@/components/AccountMenu";
+import { accountSides, useAccount } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -47,17 +49,7 @@ const steps = [
 function Landing() {
   return (
     <div className="min-h-screen bg-surface hero-glow">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <Logo />
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/account/auth" search={{ next: "/dashboard" }}>Sign in</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link to="/dashboard">Open dashboard</Link>
-          </Button>
-        </div>
-      </header>
+      <HomeHeader />
 
       <section className="mx-auto max-w-3xl px-4 pt-10 pb-14 text-center sm:px-6 sm:pt-16">
         <span className="inline-block rounded-full bg-primary px-4 py-1.5 text-xs font-bold tracking-widest text-primary-foreground uppercase">
@@ -131,6 +123,32 @@ function Landing() {
         </p>
       </section>
     </div>
+  );
+}
+
+function HomeHeader() {
+  const account = useAccount();
+  const sides = account ? accountSides(account) : [];
+  const homePath = sides.includes("business") ? "/dashboard" : "/me/work";
+
+  return (
+    <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+      <Logo />
+      <div className="flex items-center gap-2">
+        {account ? (
+          <>
+            <Button asChild size="sm">
+              <Link to={homePath}>Open dashboard</Link>
+            </Button>
+            <AccountMenu signInNext={homePath} />
+          </>
+        ) : (
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/account/auth">Sign in</Link>
+          </Button>
+        )}
+      </div>
+    </header>
   );
 }
 
