@@ -386,21 +386,17 @@ export async function signUp(input: {
     email: isPhone ? undefined : clean,
     phone: isPhone ? clean : undefined,
     password: input.password,
+    options: {
+      data: {
+        name: input.name ?? null,
+        context: input.context,
+      },
+    },
   });
 
   if (error) return { ok: false, error: error.message };
   if (!data.user) return { ok: false, error: "Sign up failed. Try again." };
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      name: input.name ?? null,
-      has_personal: input.context === "personal",
-      has_business: input.context === "business",
-    })
-    .eq("id", data.user.id);
-
-  if (profileError) return { ok: false, error: profileError.message };
 
   if (profileError) return { ok: false, error: profileError.message };
 
