@@ -56,8 +56,15 @@ function AccountAuth() {
       return;
     }
     toast.success("You're signed in to PartyTap");
-    const fallback = accountSides(result.account)[0] === "business" ? "/dashboard" : "/me/work";
-    navigate({ to: next && next.startsWith("/") ? next : fallback });
+    const sides = accountSides(result.account);
+    const fallback = sides.includes("business") ? "/dashboard" : "/me/work";
+    const businessOnlyPaths = ["/dashboard", "/work", "/bundles", "/history"];
+    const nextNeedsBusiness =
+      next && businessOnlyPaths.some((p) => next === p || next.startsWith(p + "/"));
+    const target = next && next.startsWith("/") && !(nextNeedsBusiness && !sides.includes("business"))
+      ? next
+      : fallback;
+    navigate({ to: target });
   }
   return (
     <div className="grid min-h-screen place-items-center bg-surface hero-glow px-4 py-10">
