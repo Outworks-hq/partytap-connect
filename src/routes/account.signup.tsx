@@ -101,6 +101,10 @@ function SignupPage() {
               We sent a confirmation link to <strong>{identifier}</strong>. Click it to activate
               your account, then sign in.
             </p>
+            <p className="text-xs text-muted-foreground">
+              Didn't see it? Check your{" "}
+              <span className="font-medium text-primary">spam or junk folder</span>.
+            </p>
             <Button asChild className="mt-2 w-full">
               <Link to="/account/auth" search={{ next: next ?? undefined }}>
                 Go to sign in

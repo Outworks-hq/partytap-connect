@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { accountSides, getAuthedAccount, uid, update } from "@/lib/store";
+import { accountSides, getAuthedAccount, refreshBusinessData, update } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/bundles/new")({
   beforeLoad: async ({ location }) => {
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/bundles/new")({
     if (!accountSides(account).includes("business")) {
       throw redirect({ to: "/account/connect" });
     }
+    await refreshBusinessData();
   },
   head: () => ({
     meta: [
@@ -42,26 +44,33 @@ function CreateBundle() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const id = uid();
-    update((db) => ({
-      ...db,
-      bundles: [
-        {
-          id,
-          title,
-          description,
-          businessA: { name: aName, service: aService },
-          businessB: { name: bName, service: bService },
-          createdAt: new Date().toISOString(),
-          requests: [],
-        },
-        ...db.bundles,
-      ],
-    }));
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+
+    const { data, error } = await supabase
+      .from("bundles")
+      .insert({
+        business_id: userData.user.id,
+        title,
+        description,
+        business_a_name: aName,
+        business_a_service: aService,
+        business_b_name: bName,
+        business_b_service: bService,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      toast.error("Could not create Bundle Tab. Try again.");
+      return;
+    }
+
+    await refreshBusinessData();
     toast.success("Bundle Tab created");
-    navigate({ to: "/bundles/$id", params: { id } });
+    navigate({ to: "/bundles/$id", params: { id: data.id } });
   }
 
   return (

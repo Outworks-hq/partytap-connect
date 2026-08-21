@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { Empty } from "./dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { accountSides, formatDate, getAuthedAccount, money, useDB, workStatus } from "@/lib/store";
+import { accountSides, formatDate, getAuthedAccount, money, refreshBusinessData, useDB, workStatus } from "@/lib/store";
 
 export const Route = createFileRoute("/history")({
   beforeLoad: async ({ location }) => {
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/history")({
     if (!accountSides(account).includes("business")) {
       throw redirect({ to: "/account/connect" });
     }
+    await refreshBusinessData();
   },
   head: () => ({
     meta: [

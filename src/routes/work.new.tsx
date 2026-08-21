@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { accountSides, getAuthedAccount, money, uid, update, useDB, type DetailItem } from "@/lib/store";
+import { accountSides, getAuthedAccount, money, refreshBusinessData, uid, update, useDB, type DetailItem } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/work/new")({
   beforeLoad: async ({ location }) => {
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/work/new")({
     if (!accountSides(account).includes("business")) {
       throw redirect({ to: "/account/connect" });
     }
+    await refreshBusinessData();
   },
   head: () => ({
     meta: [
@@ -46,29 +48,34 @@ function CreateWorkTab() {
     { id: uid(), label: "Instructions", value: "" },
   ]);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const id = uid();
-    update((db) => ({
-      ...db,
-      workTabs: [
-        {
-          id,
-          title,
-          description,
-          pay: Number(pay) || 0,
-          deadline,
-          slots: Math.max(1, Number(slots) || 1),
-          details: details.filter((d) => d.value.trim()),
-          payoutSource: "Main Balance",
-          createdAt: new Date().toISOString(),
-          claims: [],
-        },
-        ...db.workTabs,
-      ],
-    }));
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+
+    const { data, error } = await supabase
+      .from("work_tabs")
+      .insert({
+        business_id: userData.user.id,
+        title,
+        description,
+        pay: Number(pay) || 0,
+        deadline: deadline || null,
+        slots: Math.max(1, Number(slots) || 1),
+        details: details.filter((d) => d.value.trim()),
+        payout_source: "Main Balance",
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      toast.error("Could not create Work Tab. Try again.");
+      return;
+    }
+
+    await refreshBusinessData();
     toast.success("Work Tab created");
-    navigate({ to: "/work/$id", params: { id } });
+    navigate({ to: "/work/$id", params: { id: data.id } });
   }
 
   return (

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDB, money, formatDate, workStatus } from "@/lib/store";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { accountSides, getAuthedAccount } from "@/lib/store";
+import { accountSides, getAuthedAccount, refreshBusinessData } from "@/lib/store";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async ({ location }) => {
@@ -15,6 +15,7 @@ export const Route = createFileRoute("/dashboard")({
     if (!accountSides(account).includes("business")) {
       throw redirect({ to: "/account/connect" });
     }
+    await refreshBusinessData();
   },
   head: () => ({
     meta: [

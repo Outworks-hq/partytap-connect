@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { CopyLink } from "@/components/CopyLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { accountSides, formatDate, getAuthedAccount, money, update, useDB, workStatus } from "@/lib/store";
+import { accountSides, formatDate, getAuthedAccount, money, refreshBusinessData, update, useDB, workStatus } from "@/lib/store";
 
 export const Route = createFileRoute("/work/$id")({
   beforeLoad: async ({ location }) => {
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/work/$id")({
     if (!accountSides(account).includes("business")) {
       throw redirect({ to: "/account/connect" });
     }
+    await refreshBusinessData();
   },
   head: () => ({
     meta: [

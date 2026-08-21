@@ -87,42 +87,14 @@ export type DB = {
 const KEY = "partytap.v1";
 
 const seed: DB = {
-  balance: 250,
-  payoutConnected: true,
+  balance: 0,
+  payoutConnected: false,
   signedIn: false,
   accounts: [],
   currentAccountId: null,
   activeContext: "business",
-  workTabs: [
-    {
-      id: "abc123",
-      title: "Fix payment bug on checkout page",
-      description: "Checkout throws an error on the final step for some users.",
-      pay: 100,
-      deadline: "2026-08-28",
-      slots: 1,
-      details: [
-        { id: "d1", label: "Where to look", value: "Bug is in the /pay route on line 87" },
-        { id: "d2", label: "Access", value: "GitHub Access: aleet-dev" },
-        { id: "d3", label: "Files", value: "Design file & screenshot attached" },
-      ],
-      payoutSource: "Main Balance",
-      createdAt: "2026-08-10T10:00:00.000Z",
-      claims: [],
-    },
-  ],
-  bundles: [
-    {
-      id: "greenscape",
-      title: "Lawn care + free roof inspection",
-      description:
-        "Schedule lawn care and request a free roof inspection in one step.",
-      businessA: { name: "GreenScape Lawn Care", service: "Lawn care service" },
-      businessB: { name: "ROOF ER", service: "Free roof inspection" },
-      createdAt: "2026-08-09T10:00:00.000Z",
-      requests: [],
-    },
-  ],
+  workTabs: [],
+  bundles: [],
 };
 
 let cache: DB | null = null;
@@ -186,6 +158,82 @@ async function syncProfileToCache(userId: string) {
       signedIn: true,
     };
   });
+}
+
+async function syncWorkTabsToCache(businessId: string) {
+  const { data: tabs } = await supabase
+    .from("work_tabs")
+    .select("*, work_tab_claims(*)")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false });
+
+  if (!tabs) return;
+
+  const workTabs: WorkTab[] = tabs.map((t: any) => ({
+    id: t.id,
+    title: t.title,
+    description: t.description ?? "",
+    pay: Number(t.pay),
+    deadline: t.deadline ?? "",
+    slots: t.slots,
+    details: t.details ?? [],
+    payoutSource: t.payout_source ?? "",
+    createdAt: t.created_at,
+    claims: (t.work_tab_claims ?? []).map((c: any) => ({
+      id: c.id,
+      userId: c.user_id ?? undefined,
+      name: c.name,
+      contact: c.contact,
+      status: c.status,
+      note: c.note ?? undefined,
+      acceptedAt: c.accepted_at,
+      submittedAt: c.submitted_at ?? undefined,
+    })),
+  }));
+
+  update((d) => ({ ...d, workTabs }));
+}
+
+async function syncBundlesToCache(businessId: string) {
+  const { data: bundlesData } = await supabase
+    .from("bundles")
+    .select("*, bundle_requests(*)")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false });
+
+  if (!bundlesData) return;
+
+  const bundles: BundleTab[] = bundlesData.map((b: any) => ({
+    id: b.id,
+    title: b.title,
+    description: b.description ?? "",
+    businessA: { name: b.business_a_name, service: b.business_a_service },
+    businessB: { name: b.business_b_name, service: b.business_b_service },
+    createdAt: b.created_at,
+    requests: (b.bundle_requests ?? []).map((r: any) => ({
+      id: r.id,
+      userId: r.user_id ?? undefined,
+      name: r.name,
+      phone: r.phone ?? "",
+      address: r.address ?? "",
+      date: r.date ?? "",
+      time: r.time ?? "",
+      notes: r.notes ?? undefined,
+      createdAt: r.created_at,
+      status: r.status,
+    })),
+  }));
+
+  update((d) => ({ ...d, bundles }));
+}
+
+export async function refreshBusinessData() {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+  await Promise.all([
+    syncWorkTabsToCache(userData.user.id),
+    syncBundlesToCache(userData.user.id),
+  ]);
 }
 
 if (typeof window !== "undefined") {
