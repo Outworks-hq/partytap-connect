@@ -156,6 +156,7 @@ async function syncProfileToCache(userId: string) {
       accounts: [...others, account],
       currentAccountId: account.id,
       signedIn: true,
+      balance: Number(profile.balance ?? 0),
     };
   });
 }
