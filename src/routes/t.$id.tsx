@@ -13,11 +13,11 @@ import {
   money,
   setPending,
   takePending,
-  uid,
   update,
   useAccount,
   useDB,
 } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/t/$id")({
   head: () => ({

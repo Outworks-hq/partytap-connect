@@ -70,7 +70,9 @@ function AccountAuth() {
     <div className="grid min-h-screen place-items-center bg-surface hero-glow px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="flex justify-center">
-          <Logo />
+          <Link to="/">
+            <Logo />
+          </Link>
         </div>
         <form className="card-soft mt-6 space-y-4 p-6" onSubmit={submit}>
           <div>

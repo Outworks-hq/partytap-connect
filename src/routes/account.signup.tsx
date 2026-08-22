@@ -66,7 +66,9 @@ function SignupPage() {
     <div className="grid min-h-screen place-items-center bg-surface hero-glow px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="flex justify-center">
-          <Logo />
+          <Link to="/">
+            <Logo />
+          </Link>
         </div>
 
         {!context && (
