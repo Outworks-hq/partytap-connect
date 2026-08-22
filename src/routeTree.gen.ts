@@ -16,6 +16,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as AccountAuthRouteImport } from './routes/account.auth'
 import { Route as AccountConnectRouteImport } from './routes/account.connect'
+import { Route as AccountForgotRouteImport } from './routes/account.forgot'
+import { Route as AccountResetRouteImport } from './routes/account.reset'
 import { Route as AccountSignupRouteImport } from './routes/account.signup'
 import { Route as BIdRouteImport } from './routes/b.$id'
 import { Route as BundlesIndexRouteImport } from './routes/bundles.index'
@@ -62,6 +64,16 @@ const AccountAuthRoute = AccountAuthRouteImport.update({
 const AccountConnectRoute = AccountConnectRouteImport.update({
   id: '/account/connect',
   path: '/account/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountForgotRoute = AccountForgotRouteImport.update({
+  id: '/account/forgot',
+  path: '/account/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountResetRoute = AccountResetRouteImport.update({
+  id: '/account/reset',
+  path: '/account/reset',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountSignupRoute = AccountSignupRouteImport.update({
@@ -133,6 +145,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/account/auth': typeof AccountAuthRoute
   '/account/connect': typeof AccountConnectRoute
+  '/account/forgot': typeof AccountForgotRoute
+  '/account/reset': typeof AccountResetRoute
   '/account/signup': typeof AccountSignupRoute
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
@@ -154,6 +168,8 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/account/auth': typeof AccountAuthRoute
   '/account/connect': typeof AccountConnectRoute
+  '/account/forgot': typeof AccountForgotRoute
+  '/account/reset': typeof AccountResetRoute
   '/account/signup': typeof AccountSignupRoute
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
@@ -176,6 +192,8 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/account/auth': typeof AccountAuthRoute
   '/account/connect': typeof AccountConnectRoute
+  '/account/forgot': typeof AccountForgotRoute
+  '/account/reset': typeof AccountResetRoute
   '/account/signup': typeof AccountSignupRoute
   '/b/$id': typeof BIdRoute
   '/bundles/$id': typeof BundlesIdRoute
@@ -199,6 +217,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/account/auth'
     | '/account/connect'
+    | '/account/forgot'
+    | '/account/reset'
     | '/account/signup'
     | '/b/$id'
     | '/bundles/$id'
@@ -220,6 +240,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/account/auth'
     | '/account/connect'
+    | '/account/forgot'
+    | '/account/reset'
     | '/account/signup'
     | '/b/$id'
     | '/bundles/$id'
@@ -241,6 +263,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/account/auth'
     | '/account/connect'
+    | '/account/forgot'
+    | '/account/reset'
     | '/account/signup'
     | '/b/$id'
     | '/bundles/$id'
@@ -263,6 +287,8 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   AccountAuthRoute: typeof AccountAuthRoute
   AccountConnectRoute: typeof AccountConnectRoute
+  AccountForgotRoute: typeof AccountForgotRoute
+  AccountResetRoute: typeof AccountResetRoute
   AccountSignupRoute: typeof AccountSignupRoute
   BIdRoute: typeof BIdRoute
   BundlesIdRoute: typeof BundlesIdRoute
@@ -326,6 +352,20 @@ declare module '@tanstack/react-router' {
       path: '/account/connect'
       fullPath: '/account/connect'
       preLoaderRoute: typeof AccountConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/forgot': {
+      id: '/account/forgot'
+      path: '/account/forgot'
+      fullPath: '/account/forgot'
+      preLoaderRoute: typeof AccountForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/reset': {
+      id: '/account/reset'
+      path: '/account/reset'
+      fullPath: '/account/reset'
+      preLoaderRoute: typeof AccountResetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/signup': {
@@ -423,6 +463,8 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   AccountAuthRoute: AccountAuthRoute,
   AccountConnectRoute: AccountConnectRoute,
+  AccountForgotRoute: AccountForgotRoute,
+  AccountResetRoute: AccountResetRoute,
   AccountSignupRoute: AccountSignupRoute,
   BIdRoute: BIdRoute,
   BundlesIdRoute: BundlesIdRoute,

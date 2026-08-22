@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { CheckCircle2, CreditCard, LogOut, Wallet, XCircle } from "lucide-react";
+import { CheckCircle2, CreditCard, KeyRound, LogOut, Wallet, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AccountAvatar } from "@/components/AccountMenu";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
 import {
   accountSides,
   connectionState,
@@ -166,6 +167,7 @@ function SettingsPage() {
           />
         </section>
 
+        <ChangePasswordSection />
         <Button
           variant="outline"
           className="w-fit"
@@ -178,6 +180,82 @@ function SettingsPage() {
         </Button>
       </div>
     </AppShell>
+  );
+}
+
+function ChangePasswordSection() {
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
+    setSubmitting(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setSubmitting(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    toast.success("Password updated");
+    setOpen(false);
+    setPassword("");
+    setConfirm("");
+  }
+
+  if (!open) {
+    return (
+      <Button variant="outline" className="w-fit" onClick={() => setOpen(true)}>
+        <KeyRound className="h-4 w-4" /> Change password
+      </Button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="card-soft space-y-3 p-4">
+      <p className="text-sm font-bold text-foreground">Change password</p>
+      <div className="space-y-2">
+        <Label htmlFor="new-pass">New password</Label>
+        <Input
+          id="new-pass"
+          type="password"
+          required
+          placeholder="At least 6 characters"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="confirm-pass">Confirm password</Label>
+        <Input
+          id="confirm-pass"
+          type="password"
+          required
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
+      </div>
+      {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={submitting}>
+          {submitting ? "Updating..." : "Update password"}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
 

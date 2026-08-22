@@ -92,7 +92,16 @@ function AccountAuth() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="acct-password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="acct-password">Password</Label>
+              <Link
+                to="/account/forgot"
+                search={identifier.includes("@") ? { email: identifier } : {}}
+                className="text-xs font-semibold text-primary"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <Input
               id="acct-password"
               type="password"

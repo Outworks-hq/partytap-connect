@@ -291,14 +291,18 @@ export async function getAuthedAccount(): Promise<Account | null> {
   const { data } = await supabase.auth.getSession();
   if (!data.session?.user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", data.session.user.id)
-    .single();
+  let profile: any = null;
+  for (let attempt = 0; attempt < 3 && !profile; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 400));
+    const { data: p } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", data.session.user.id)
+      .single();
+    if (p) profile = p;
+  }
 
   if (!profile) return null;
-
   const account: Account = {
     id: profile.id,
     email: profile.email ?? "",
