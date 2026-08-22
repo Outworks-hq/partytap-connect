@@ -8,6 +8,7 @@ import { accountSides, getAuthedAccount, refreshBusinessData } from "@/lib/store
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async ({ location }) => {
+    if (typeof window === "undefined") return;
     const account = await getAuthedAccount();
     if (!account) {
       throw redirect({ to: "/account/auth", search: { next: location.pathname } });

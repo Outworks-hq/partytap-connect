@@ -9,6 +9,7 @@ import { accountSides, formatDate, getAuthedAccount, refreshBusinessData, update
 
 export const Route = createFileRoute("/bundles/$id")({
   beforeLoad: async ({ location }) => {
+    if (typeof window === "undefined") return;
     const account = await getAuthedAccount();
     if (!account) {
       throw redirect({ to: "/account/auth", search: { next: location.pathname } });

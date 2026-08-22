@@ -9,6 +9,7 @@ import { accountSides, formatDate, getAuthedAccount, money, refreshBusinessData,
 
 export const Route = createFileRoute("/work/$id")({
   beforeLoad: async ({ location }) => {
+    if (typeof window === "undefined") return;
     const account = await getAuthedAccount();
     if (!account) {
       throw redirect({ to: "/account/auth", search: { next: location.pathname } });

@@ -329,6 +329,11 @@ export async function getAuthedAccount(): Promise<Account | null> {
   return account;
 }
 
+export async function requireBusinessAccount(): Promise<Account | "skip" | null> {
+  if (typeof window === "undefined") return "skip";
+  return getAuthedAccount();
+}
+
 /* ---------- PartyTap guest accounts (demo, local-only) ---------- */
 
 export function useAccount(): Account | null {

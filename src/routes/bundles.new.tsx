@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/bundles/new")({
   beforeLoad: async ({ location }) => {
+    if (typeof window === "undefined") return;
     const account = await getAuthedAccount();
     if (!account) {
       throw redirect({ to: "/account/auth", search: { next: location.pathname } });

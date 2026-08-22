@@ -8,6 +8,7 @@ import { accountSides, getAuthedAccount, refreshBusinessData, useDB, money, form
 
 export const Route = createFileRoute("/work/")({
   beforeLoad: async ({ location }) => {
+    if (typeof window === "undefined") return;
     const account = await getAuthedAccount();
     if (!account) {
       throw redirect({ to: "/account/auth", search: { next: location.pathname } });
