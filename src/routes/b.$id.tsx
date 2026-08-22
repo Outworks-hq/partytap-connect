@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  createBundleRequest,
+  fetchBundleById,
   formatDate,
   setPending,
   takePending,
-  uid,
-  update,
   useAccount,
-  useDB,
+  type BundleTab,
 } from "@/lib/store";
 
 export const Route = createFileRoute("/b/$id")({
@@ -33,11 +33,11 @@ export const Route = createFileRoute("/b/$id")({
 
 function GuestBundle() {
   const { id } = Route.useParams();
-  const db = useDB();
   const account = useAccount();
   const navigate = useNavigate();
-  const bundle = db.bundles.find((b) => b.id === id);
+  const [bundle, setBundle] = useState<BundleTab | null | undefined>(undefined);
   const [done, setDone] = useState<null | { name: string; date: string; time: string }>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -49,32 +49,25 @@ function GuestBundle() {
   });
   const resumed = useRef(false);
 
-  function createRequest(payload: typeof form, userId: string) {
-    update((d) => ({
-      ...d,
-      bundles: d.bundles.map((b) =>
-        b.id !== id
-          ? b
-          : {
-              ...b,
-              requests: [
-                {
-                  id: uid(),
-                  userId,
-                  name: payload.name,
-                  phone: payload.phone,
-                  address: payload.address,
-                  date: payload.date,
-                  time: payload.time,
-                  notes: payload.notes,
-                  createdAt: new Date().toISOString(),
-                  status: "new" as const,
-                },
-                ...b.requests,
-              ],
-            },
-      ),
-    }));
+  useEffect(() => {
+    fetchBundleById(id).then(setBundle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  async function createRequest(payload: typeof form, userId: string) {
+    setSubmitting(true);
+    const result = await createBundleRequest({
+      bundleId: id,
+      userId,
+      name: payload.name,
+      phone: payload.phone,
+      address: payload.address,
+      date: payload.date,
+      time: payload.time,
+      notes: payload.notes,
+    });
+    setSubmitting(false);
+    if (!result.ok) return;
     setDone({ name: payload.name, date: payload.date, time: payload.time });
   }
 
@@ -88,6 +81,14 @@ function GuestBundle() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, id]);
+
+  if (bundle === undefined) {
+    return (
+      <GuestShell>
+        <div className="card-soft p-8 text-center text-sm text-muted-foreground">Loading…</div>
+      </GuestShell>
+    );
+  }
 
   if (!bundle) {
     return (
@@ -210,8 +211,8 @@ function GuestBundle() {
               ))}
             </div>
 
-            <Button type="submit" size="lg" className="w-full">
-              Confirm bundle
+            <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+              {submitting ? "Confirming…" : "Confirm bundle"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
               Each business fulfils its own service.

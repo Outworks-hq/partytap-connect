@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { CopyLink } from "@/components/CopyLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { accountSides, formatDate, getAuthedAccount, money, refreshBusinessData, update, useDB, workStatus } from "@/lib/store";
+import { accountSides, formatDate, getAuthedAccount, money, refreshBusinessData, releaseWorkTabPayment, useDB, workStatus } from "@/lib/store";
 
 export const Route = createFileRoute("/work/$id")({
   beforeLoad: async ({ location }) => {
@@ -45,22 +45,14 @@ function WorkDetail() {
     );
   }
 
-  function release(claimId: string) {
-    update((db) => ({
-      ...db,
-      balance: Math.max(0, db.balance - (tab?.pay ?? 0)),
-      workTabs: db.workTabs.map((t) =>
-        t.id !== id
-          ? t
-          : {
-              ...t,
-              claims: t.claims.map((c) =>
-                c.id === claimId ? { ...c, status: "paid" as const } : c,
-              ),
-            },
-      ),
-    }));
-    toast.success("Payment released (demo)");
+  async function release(claimId: string) {
+    const result = await releaseWorkTabPayment(claimId, tab?.pay ?? 0);
+    if (!result.ok) {
+      toast.error("Could not release payment. Try again.");
+      return;
+    }
+    await refreshBusinessData();
+    toast.success("Payment released");
   }
 
   return (
@@ -135,7 +127,7 @@ function WorkDetail() {
             </div>
           ))}
           <p className="text-xs text-muted-foreground">
-            Work is completed and reviewed outside PartyTap. Demo payouts only.
+            Work is completed and reviewed outside PartyTap.
           </p>
         </section>
       </div>

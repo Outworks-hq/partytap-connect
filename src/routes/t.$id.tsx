@@ -9,15 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  createWorkTabClaim,
+  fetchWorkTabById,
   formatDate,
   money,
   setPending,
+  submitWorkTabClaim,
   takePending,
-  update,
   useAccount,
-  useDB,
+  type WorkTab,
 } from "@/lib/store";
-import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/t/$id")({
   head: () => ({
@@ -31,73 +32,64 @@ export const Route = createFileRoute("/t/$id")({
   component: GuestWorkTab,
 });
 
-const CLAIM_KEY = "partytap.claims";
-
-function myClaims(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(window.localStorage.getItem(CLAIM_KEY) ?? "{}");
-  } catch {
-    return {};
-  }
-}
-
 function GuestWorkTab() {
   const { id } = Route.useParams();
-  const db = useDB();
   const account = useAccount();
   const navigate = useNavigate();
-  const tab = db.workTabs.find((t) => t.id === id);
-  const [claimId, setClaimId] = useState<string | null>(() => myClaims()[id] ?? null);
+  const [tab, setTab] = useState<WorkTab | null | undefined>(undefined);
   const [name, setName] = useState("");
   const [contact, setContact] = useState(account?.email ?? "");
   const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const resumed = useRef(false);
 
-  const ownedClaim = account
-    ? db.workTabs.find((t) => t.id === id)?.claims.find((c) => c.userId === account.id)
-    : undefined;
+  async function loadTab() {
+    const fresh = await fetchWorkTabById(id);
+    setTab(fresh);
+  }
 
-  function createClaim(payload: { name: string; contact: string; userId: string }) {
-    const cid = uid();
-    update((d) => ({
-      ...d,
-      workTabs: d.workTabs.map((t) =>
-        t.id !== id
-          ? t
-          : {
-              ...t,
-              claims: [
-                ...t.claims,
-                {
-                  id: cid,
-                  userId: payload.userId,
-                  name: payload.name,
-                  contact: payload.contact,
-                  acceptedAt: new Date().toISOString(),
-                  status: "accepted" as const,
-                },
-              ],
-            },
-      ),
-    }));
-    const claims = myClaims();
-    claims[id] = cid;
-    window.localStorage.setItem(CLAIM_KEY, JSON.stringify(claims));
-    setClaimId(cid);
+  useEffect(() => {
+    loadTab();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const ownedClaim = account && tab ? tab.claims.find((c) => c.userId === account.id) : undefined;
+
+  async function createClaim(payload: { name: string; contact: string; userId: string }) {
+    setSubmitting(true);
+    const result = await createWorkTabClaim({
+      workTabId: id,
+      name: payload.name,
+      contact: payload.contact,
+      userId: payload.userId,
+    });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error("Could not accept this Work Tab. Try again.");
+      return;
+    }
+    await loadTab();
     toast.success("Slot assigned — details unlocked");
   }
 
   // Resume the accept the visitor started before signing in.
   useEffect(() => {
-    if (!account || resumed.current) return;
+    if (!account || !tab || resumed.current) return;
     const pending = takePending("work", id);
     resumed.current = true;
     if (pending && pending.kind === "work" && !ownedClaim) {
       createClaim({ name: pending.name, contact: pending.contact, userId: account.id });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, id]);
+  }, [account, tab, id]);
+
+  if (tab === undefined) {
+    return (
+      <GuestShell>
+        <div className="card-soft p-8 text-center text-sm text-muted-foreground">Loading…</div>
+      </GuestShell>
+    );
+  }
 
   if (!tab) {
     return (
@@ -110,9 +102,7 @@ function GuestWorkTab() {
     );
   }
 
-  const claim =
-    (account ? tab.claims.find((c) => c.userId === account.id) : undefined) ??
-    tab.claims.find((c) => c.id === claimId && !c.userId);
+  const claim = ownedClaim;
   const slotsLeft = tab.slots - tab.claims.length;
 
   function accept(e: React.FormEvent) {
@@ -128,34 +118,13 @@ function GuestWorkTab() {
     createClaim({ name, contact, userId: account.id });
   }
 
-  function submitWork() {
-    update((db) => ({
-      ...db,
-      workTabs: db.workTabs.map((t) =>
-        t.id !== id
-          ? t
-          : {
-              ...t,
-              claims: t.claims.map((c) =>
-                c.id === claim?.id
-                  ? { ...c, status: "submitted" as const, note, submittedAt: new Date().toISOString() }
-                  : c,
-              ),
-            },
-      ),
-    }));
+  async function submitWork() {
+    if (!claim) return;
+    setSubmitting(true);
+    await submitWorkTabClaim(claim.id, note);
+    setSubmitting(false);
+    await loadTab();
     toast.success("Admin notified that the work is done");
-  }
-
-  function resetGuest() {
-    const claims = myClaims();
-    delete claims[id];
-    window.localStorage.setItem(CLAIM_KEY, JSON.stringify(claims));
-    setClaimId(null);
-    setName("");
-    setContact("");
-    setNote("");
-    toast.success("Viewing as a new guest");
   }
 
   return (
@@ -199,8 +168,8 @@ function GuestWorkTab() {
                 <Label htmlFor="contact">Email or phone</Label>
                 <Input id="contact" value={contact} onChange={(e) => setContact(e.target.value)} required />
               </div>
-              <Button type="submit" size="lg" className="w-full">
-                Confirm & Accept
+              <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+                {submitting ? "Accepting…" : "Confirm & Accept"}
               </Button>
               <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                 <Lock className="h-3.5 w-3.5" /> You'll sign in to PartyTap, then the details
@@ -235,7 +204,7 @@ function GuestWorkTab() {
               <div className="rounded-xl bg-accent p-5 text-center">
                 <CheckCircle2 className="mx-auto h-8 w-8 text-success" />
                 <p className="mt-2 text-base font-bold text-foreground">Payment released</p>
-                <p className="text-sm text-muted-foreground">You earned {money(tab.pay)} (demo).</p>
+                <p className="text-sm text-muted-foreground">You earned {money(tab.pay)}.</p>
               </div>
             ) : claim.status === "submitted" ? (
               <div className="text-center">
@@ -261,8 +230,8 @@ function GuestWorkTab() {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                 />
-                <Button className="w-full" onClick={submitWork}>
-                  Submit work as done
+                <Button className="w-full" onClick={submitWork} disabled={submitting}>
+                  {submitting ? "Submitting…" : "Submit work as done"}
                 </Button>
               </div>
             )}
@@ -274,14 +243,6 @@ function GuestWorkTab() {
           >
             View this in My PartyTap
           </Link>
-
-          <button
-            type="button"
-            onClick={resetGuest}
-            className="mx-auto mt-4 block text-xs font-medium text-muted-foreground underline underline-offset-4"
-          >
-            Not you? View this link as a new guest
-          </button>
         </>
       )}
     </GuestShell>

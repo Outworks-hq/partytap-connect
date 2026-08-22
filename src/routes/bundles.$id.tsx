@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { CopyLink } from "@/components/CopyLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { accountSides, formatDate, getAuthedAccount, refreshBusinessData, update, useDB } from "@/lib/store";
+import { accountSides, formatDate, getAuthedAccount, refreshBusinessData, scheduleBundleRequest, useDB } from "@/lib/store";
 
 export const Route = createFileRoute("/bundles/$id")({
   beforeLoad: async ({ location }) => {
@@ -45,20 +45,9 @@ function BundleDetail() {
     );
   }
 
-  function schedule(reqId: string) {
-    update((db) => ({
-      ...db,
-      bundles: db.bundles.map((b) =>
-        b.id !== id
-          ? b
-          : {
-              ...b,
-              requests: b.requests.map((r) =>
-                r.id === reqId ? { ...r, status: "scheduled" as const } : r,
-              ),
-            },
-      ),
-    }));
+  async function schedule(reqId: string) {
+    await scheduleBundleRequest(reqId);
+    await refreshBusinessData();
     toast.success("Marked as scheduled");
   }
 

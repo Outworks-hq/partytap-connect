@@ -251,6 +251,150 @@ if (typeof window !== "undefined") {
   });
 }
 
+export async function fetchWorkTabById(id: string): Promise<WorkTab | null> {
+  const { data: t } = await supabase
+    .from("work_tabs")
+    .select("*, work_tab_claims(*)")
+    .eq("id", id)
+    .single();
+
+  if (!t) return null;
+
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description ?? "",
+    pay: Number(t.pay),
+    deadline: t.deadline ?? "",
+    slots: t.slots,
+    details: t.details ?? [],
+    payoutSource: t.payout_source ?? "",
+    createdAt: t.created_at,
+    claims: (t.work_tab_claims ?? []).map((c: any) => ({
+      id: c.id,
+      userId: c.user_id ?? undefined,
+      name: c.name,
+      contact: c.contact,
+      status: c.status,
+      note: c.note ?? undefined,
+      acceptedAt: c.accepted_at,
+      submittedAt: c.submitted_at ?? undefined,
+    })),
+  };
+}
+
+export async function createWorkTabClaim(payload: {
+  workTabId: string;
+  name: string;
+  contact: string;
+  userId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase.from("work_tab_claims").insert({
+    work_tab_id: payload.workTabId,
+    user_id: payload.userId,
+    name: payload.name,
+    contact: payload.contact,
+    status: "accepted",
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function submitWorkTabClaim(claimId: string, note: string) {
+  await supabase
+    .from("work_tab_claims")
+    .update({ status: "submitted", note, submitted_at: new Date().toISOString() })
+    .eq("id", claimId);
+}
+
+export async function releaseWorkTabPayment(
+  claimId: string,
+  amount: number,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return { ok: false, error: "Not signed in." };
+
+  const { error: claimError } = await supabase
+    .from("work_tab_claims")
+    .update({ status: "paid" })
+    .eq("id", claimId);
+
+  if (claimError) return { ok: false, error: claimError.message };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("balance")
+    .eq("id", userData.user.id)
+    .single();
+
+  const currentBalance = Number(profile?.balance ?? 0);
+  const newBalance = Math.max(0, currentBalance - amount);
+
+  await supabase.from("profiles").update({ balance: newBalance }).eq("id", userData.user.id);
+
+  return { ok: true };
+}
+
+export async function scheduleBundleRequest(requestId: string) {
+  await supabase.from("bundle_requests").update({ status: "scheduled" }).eq("id", requestId);
+}
+
+export async function fetchBundleById(id: string): Promise<BundleTab | null> {
+  const { data: b } = await supabase
+    .from("bundles")
+    .select("*, bundle_requests(*)")
+    .eq("id", id)
+    .single();
+
+  if (!b) return null;
+
+  return {
+    id: b.id,
+    title: b.title,
+    description: b.description ?? "",
+    businessA: { name: b.business_a_name, service: b.business_a_service },
+    businessB: { name: b.business_b_name, service: b.business_b_service },
+    createdAt: b.created_at,
+    requests: (b.bundle_requests ?? []).map((r: any) => ({
+      id: r.id,
+      userId: r.user_id ?? undefined,
+      name: r.name,
+      phone: r.phone ?? "",
+      address: r.address ?? "",
+      date: r.date ?? "",
+      time: r.time ?? "",
+      notes: r.notes ?? undefined,
+      createdAt: r.created_at,
+      status: r.status,
+    })),
+  };
+}
+
+export async function createBundleRequest(payload: {
+  bundleId: string;
+  userId: string;
+  name: string;
+  phone: string;
+  address: string;
+  date: string;
+  time: string;
+  notes?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase.from("bundle_requests").insert({
+    bundle_id: payload.bundleId,
+    user_id: payload.userId,
+    name: payload.name,
+    phone: payload.phone,
+    address: payload.address,
+    date: payload.date,
+    time: payload.time,
+    notes: payload.notes ?? null,
+    status: "new",
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export function update(fn: (db: DB) => DB) {
   write(fn(read()));
 }
