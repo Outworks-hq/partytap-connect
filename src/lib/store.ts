@@ -228,6 +228,28 @@ async function syncBundlesToCache(businessId: string) {
   update((d) => ({ ...d, bundles }));
 }
 
+export async function startStripeConnectOnboarding(): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return { ok: false, error: "Not signed in." };
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-connect-onboarding`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  const result = await response.json();
+  if (!response.ok || !result.url) {
+    return { ok: false, error: result.error ?? "Could not start onboarding." };
+  }
+  return { ok: true, url: result.url };
+}
+
 export async function refreshBusinessData() {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
