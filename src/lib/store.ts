@@ -20,6 +20,7 @@ export type Account = {
   password: string;
   verified?: boolean;
   createdAt: string;
+  stripeConnectOnboarded?: boolean;
   personal?: PersonalSide;
   business?: BusinessSide;
 };
@@ -135,6 +136,7 @@ async function syncProfileToCache(userId: string) {
     password: "",
     verified: true,
     createdAt: profile.created_at,
+    stripeConnectOnboarded: profile.stripe_connect_onboarded ?? false,
     ...(profile.has_personal
       ? { personal: { createdAt: profile.created_at, payoutConnected: profile.personal_payout_connected } }
       : {}),
@@ -478,6 +480,7 @@ export async function getAuthedAccount(): Promise<Account | null> {
     password: "",
     verified: true,
     createdAt: profile.created_at,
+    stripeConnectOnboarded: profile.stripe_connect_onboarded ?? false,
     ...(profile.has_personal
       ? { personal: { createdAt: profile.created_at, payoutConnected: profile.personal_payout_connected } }
       : {}),
@@ -586,6 +589,7 @@ export async function signIn(identifier: string, password: string): Promise<Auth
     password: "",
     verified: true,
     createdAt: profile.created_at,
+    stripeConnectOnboarded: profile.stripe_connect_onboarded ?? false,
     ...(profile.has_personal
       ? { personal: { createdAt: profile.created_at, payoutConnected: profile.personal_payout_connected } }
       : {}),
@@ -723,15 +727,16 @@ export async function setConnection(
 }
 
 export function connectionState(account: Account | null, context: AccountContext) {
+  const stripeConnected = account?.stripeConnectOnboarded ?? false;
   if (context === "personal") {
     return {
       paymentConnected: true,
-      payoutConnected: account?.personal?.payoutConnected ?? false,
+      payoutConnected: stripeConnected,
     };
   }
   return {
     paymentConnected: account?.business?.paymentConnected ?? false,
-    payoutConnected: account?.business?.payoutConnected ?? false,
+    payoutConnected: stripeConnected,
   };
 }
 
