@@ -145,6 +145,16 @@ function SettingsPage() {
             {context === "business" ? "Business payments" : "Personal payouts"}
           </h2>
           {context === "business" && (
+            <ConnectionRow
+              icon={CreditCard}
+              label="Payment method"
+              hint="Required to fund paid Work Tabs you create."
+              connected={conn.paymentConnected}
+              onToggle={() =>
+                setConnection("business", "paymentConnected", !conn.paymentConnected)
+              }
+            />
+          )}
           <ConnectionRow
             icon={Wallet}
             label="Payout account"
@@ -162,18 +172,6 @@ function SettingsPage() {
               }
               window.location.href = result.url;
             }}
-          />
-          )}
-          <ConnectionRow
-            icon={Wallet}
-            label="Payout account"
-            hint={
-              context === "business"
-                ? "Where released funds settle from."
-                : "Required before you can receive payment for accepted Work Tabs."
-            }
-            connected={conn.payoutConnected}
-            onToggle={() => setConnection(context, "payoutConnected", !conn.payoutConnected)}
           />
         </section>
 
