@@ -47,29 +47,42 @@ Deno.serve(async (req) => {
   const event = JSON.parse(body);
 
   try {
-    switch (event.type) {
-      case "v2.core.account.updated":
-      case "account.updated": {
-        const account = event.data?.object ?? event.data;
-        const accountId = account?.id;
-        if (!accountId) break;
+    const accountEventTypes = [
+      "v2.core.account.updated",
+      "v2.core.account[configuration.recipient].updated",
+      "v2.core.account[configuration.recipient].capability_status_updated",
+    ];
 
-        // Consider onboarded when the account can receive transfers/payouts
-        const onboarded =
-          account?.payouts_enabled === true ||
-          account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers
-            ?.status === "active";
+    if (accountEventTypes.includes(event.type)) {
+      // Thin payloads only reference the object — fetch the full account from Stripe.
+      const accountId = event.related_object?.id ?? event.data?.id;
+      if (accountId) {
+        const stripeKey = Deno.env.get("STRIPE_SECRET_KEY")!;
+        const accRes = await fetch(
+          `https://api.stripe.com/v2/core/accounts/${accountId}?include=configuration.recipient`,
+          {
+            headers: {
+              Authorization: `Bearer ${stripeKey}`,
+              "Stripe-Version": "2026-07-29.preview",
+            },
+          },
+        );
+
+        const account = await accRes.json();
+        console.log("WEBHOOK account fetch:", accRes.status, JSON.stringify(account));
+
+        const transfersStatus =
+          account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status;
+        const onboarded = transfersStatus === "active";
 
         await supabaseAdmin
           .from("profiles")
-          .update({ stripe_connect_onboarded: !!onboarded })
+          .update({ stripe_connect_onboarded: onboarded })
           .eq("stripe_connect_account_id", accountId);
-        break;
-      }
-      default:
-        break;
-    }
 
+        console.log("WEBHOOK updated onboarded:", accountId, onboarded);
+      }
+    }
     return new Response(JSON.stringify({ received: true }), {
       headers: { "Content-Type": "application/json" },
     });

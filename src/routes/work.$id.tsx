@@ -6,6 +6,7 @@ import { CopyLink } from "@/components/CopyLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { accountSides, formatDate, getAuthedAccount, money, refreshBusinessData, releaseWorkTabPayment, useDB, workStatus } from "@/lib/store";
+import { calculateNetPayout, calculatePlatformFee } from "@/lib/config";
 
 export const Route = createFileRoute("/work/$id")({
   beforeLoad: async ({ location }) => {
@@ -116,13 +117,24 @@ function WorkDetail() {
               <p className="text-xs text-muted-foreground">{c.contact}</p>
               {c.note && <p className="mt-2 text-sm text-foreground">“{c.note}”</p>}
               {c.status === "paid" ? (
-                <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-success">
-                  <CheckCircle2 className="h-4 w-4" /> {money(tab.pay)} released
-                </p>
+                <div className="mt-3">
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-success">
+                    <CheckCircle2 className="h-4 w-4" /> {money(calculateNetPayout(tab.pay))} released
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {money(tab.pay)} total · {money(calculatePlatformFee(tab.pay))} platform fee
+                  </p>
+                </div>
               ) : (
-                <Button className="mt-3 w-full" size="sm" onClick={() => release(c.id)}>
-                  Release payment ({money(tab.pay)})
-                </Button>
+                <div className="mt-3">
+                  <Button className="w-full" size="sm" onClick={() => release(c.id)}>
+                    Release payment ({money(tab.pay)})
+                  </Button>
+                  <p className="mt-1.5 text-center text-xs text-muted-foreground">
+                    {money(calculateNetPayout(tab.pay))} to recipient ·{" "}
+                    {money(calculatePlatformFee(tab.pay))} platform fee
+                  </p>
+                </div>
               )}
             </div>
           ))}

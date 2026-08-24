@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
 export type DetailItem = { id: string; label: string; value: string };
+import { useEffect, useState } from "react";
 
 export type AccountContext = "personal" | "business";
 
@@ -359,6 +360,29 @@ export async function releaseWorkTabPayment(
 
 export async function scheduleBundleRequest(requestId: string) {
   await supabase.from("bundle_requests").update({ status: "scheduled" }).eq("id", requestId);
+}
+
+export async function refreshStripeConnectStatus(): Promise<boolean> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return false;
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-connect-status`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  const result = await response.json();
+  if (result?.onboarded) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) await syncProfileToCache(userData.user.id);
+  }
+  return !!result?.onboarded;
 }
 
 export async function fetchBundleById(id: string): Promise<BundleTab | null> {

@@ -51,15 +51,29 @@ Deno.serve(async (req) => {
     if (claim.status === "paid") return json({ error: "Already paid" }, 400);
     if (!claim.user_id) return json({ error: "Claim has no recipient" }, 400);
 
-    // Recipient must have completed Stripe Connect onboarding
-    const { data: recipient } = await supabase
+    // Recipient must have completed Stripe Connect onboarding.
+    // Use service role: the caller is the business owner (verified above) and
+    // can't read another user's profile row under RLS.
+    const adminLookup = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: recipient, error: recipientError } = await adminLookup
       .from("profiles")
       .select("stripe_connect_account_id")
       .eq("id", claim.user_id)
       .single();
 
+    console.log("DIAG claim.user_id:", claim.user_id);
+    console.log("DIAG recipient:", JSON.stringify(recipient));
+    console.log("DIAG recipientError:", JSON.stringify(recipientError));
+
     if (!recipient?.stripe_connect_account_id) {
-      return json({ error: "Recipient hasn't connected a payout account yet." }, 400);
+      return json({
+        error: "Recipient hasn't connected a payout account yet.",
+        debug: { userId: claim.user_id, recipient, recipientError },
+      }, 400);
     }
 
     const gross = Number(workTab.pay);
