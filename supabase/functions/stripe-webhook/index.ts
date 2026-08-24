@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
   const secrets = [
     Deno.env.get("STRIPE_WEBHOOK_SECRET"),
     Deno.env.get("STRIPE_WEBHOOK_SECRET_V1"),
+    Deno.env.get("STRIPE_WEBHOOK_SECRET_CLI"),
   ].filter(Boolean) as string[];
 
   if (!signature || secrets.length === 0) {

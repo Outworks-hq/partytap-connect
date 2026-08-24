@@ -276,6 +276,32 @@ if (typeof window !== "undefined") {
   });
 }
 
+export async function verifyPendingTopups(): Promise<number> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return 0;
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-verify-session`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  const result = await response.json();
+  const credited = Number(result?.credited ?? 0);
+
+  if (credited > 0) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) await syncProfileToCache(userData.user.id);
+  }
+
+  return credited;
+}
+
 export async function startAddFunds(
   amount: number,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {

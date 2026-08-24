@@ -1,10 +1,11 @@
+import { useEffect } from "react";
 import { Briefcase, Layers, Plus, Users, Wallet } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDB, money, formatDate, workStatus } from "@/lib/store";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { accountSides, getAuthedAccount, refreshBusinessData } from "@/lib/store";
+import { accountSides, getAuthedAccount, refreshBusinessData, verifyPendingTopups } from "@/lib/store";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async ({ location }) => {
@@ -32,8 +33,18 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
+
 function Dashboard() {
   const db = useDB();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("funded") === "true") {
+      verifyPendingTopups().then((credited) => {
+        if (credited > 0) refreshBusinessData();
+      });
+    }
+  }, []);
   const openTabs = db.workTabs.filter((t) => workStatus(t) !== "Paid");
   const requests = db.bundles.flatMap((b) => b.requests);
 
