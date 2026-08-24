@@ -333,29 +333,27 @@ export async function submitWorkTabClaim(claimId: string, note: string) {
 
 export async function releaseWorkTabPayment(
   claimId: string,
-  amount: number,
+  _amount: number,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return { ok: false, error: "Not signed in." };
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return { ok: false, error: "Not signed in." };
 
-  const { error: claimError } = await supabase
-    .from("work_tab_claims")
-    .update({ status: "paid" })
-    .eq("id", claimId);
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-release-payment`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ claimId }),
+    },
+  );
 
-  if (claimError) return { ok: false, error: claimError.message };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("balance")
-    .eq("id", userData.user.id)
-    .single();
-
-  const currentBalance = Number(profile?.balance ?? 0);
-  const newBalance = Math.max(0, currentBalance - amount);
-
-  await supabase.from("profiles").update({ balance: newBalance }).eq("id", userData.user.id);
-
+  const result = await response.json();
+  if (!response.ok) {
+    return { ok: false, error: result.error ?? "Could not release payment." };
+  }
   return { ok: true };
 }
 

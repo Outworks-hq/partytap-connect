@@ -48,7 +48,7 @@ function WorkDetail() {
   async function release(claimId: string) {
     const result = await releaseWorkTabPayment(claimId, tab?.pay ?? 0);
     if (!result.ok) {
-      toast.error("Could not release payment. Try again.");
+      toast.error(result.error);
       return;
     }
     await refreshBusinessData();

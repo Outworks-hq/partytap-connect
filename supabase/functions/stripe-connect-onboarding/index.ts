@@ -47,15 +47,49 @@ Deno.serve(async (req) => {
 
     let accountId = profile?.stripe_connect_account_id;
 
+    const STRIPE_VERSION = "2026-07-29.preview";
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY")!;
+
     if (!accountId) {
-      const account = await stripe.accounts.create({
-        type: "express",
-        email: profile?.email ?? userData.user.email,
-        capabilities: {
-          transfers: { requested: true },
+      const createRes = await fetch("https://api.stripe.com/v2/core/accounts", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${stripeKey}`,
+          "Stripe-Version": STRIPE_VERSION,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          contact_email: profile?.email ?? userData.user.email,
+          dashboard: "express",
+          defaults: {
+            responsibilities: {
+              fees_collector: "application",
+              losses_collector: "application",
+            },
+          },
+          identity: { country: "us" },
+          configuration: {
+            recipient: {
+              capabilities: {
+                stripe_balance: {
+                  stripe_transfers: { requested: true },
+                },
+              },
+            },
+          },
+          include: ["configuration.recipient", "identity", "requirements"],
+        }),
       });
-      accountId = account.id;
+
+      const created = await createRes.json();
+      if (!createRes.ok) {
+        return new Response(JSON.stringify({ error: created.error?.message ?? "Account creation failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      accountId = created.id;
 
       await supabase
         .from("profiles")
@@ -64,14 +98,36 @@ Deno.serve(async (req) => {
     }
 
     const origin = req.headers.get("origin") ?? "https://www.partytap.co";
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      refresh_url: `${origin}/settings`,
-      return_url: `${origin}/settings?connected=true`,
-      type: "account_onboarding",
+
+    const linkRes = await fetch("https://api.stripe.com/v2/core/account_links", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${stripeKey}`,
+        "Stripe-Version": STRIPE_VERSION,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        account: accountId,
+        use_case: {
+          type: "account_onboarding",
+          account_onboarding: {
+            configurations: ["recipient"],
+            refresh_url: `${origin}/settings`,
+            return_url: `${origin}/settings?connected=true`,
+          },
+        },
+      }),
     });
 
-    return new Response(JSON.stringify({ url: accountLink.url }), {
+    const link = await linkRes.json();
+    if (!linkRes.ok) {
+      return new Response(JSON.stringify({ error: link.error?.message ?? "Onboarding link failed" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ url: link.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
