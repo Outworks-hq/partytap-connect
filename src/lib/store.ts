@@ -350,7 +350,7 @@ export async function fetchMyClaimedWork(): Promise<Array<{ tab: WorkTab; claim:
     });
 }
 
-export async function fetchMyBundleRequests(): Promise
+export async function fetchMyBundleRequests(): Promise<
   Array<{ bundle: BundleTab; request: BundleRequest }>
 > {
   const { data: userData } = await supabase.auth.getUser();
