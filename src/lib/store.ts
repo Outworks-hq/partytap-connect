@@ -308,16 +308,21 @@ export async function fetchMyClaimedWork(): Promise<Array<{ tab: WorkTab; claim:
 
   const { data: claims } = await supabase
     .from("work_tab_claims")
-    .select("*, work_tabs(*)")
+    .select("*")
     .eq("user_id", userData.user.id)
     .order("accepted_at", { ascending: false });
 
-  if (!claims) return [];
+  if (!claims || claims.length === 0) return [];
+
+  const tabIds = [...new Set(claims.map((c: any) => c.work_tab_id))];
+  const { data: tabs } = await supabase.from("work_tabs").select("*").in("id", tabIds);
+
+  const tabsById = new Map((tabs ?? []).map((t: any) => [t.id, t]));
 
   return claims
-    .filter((c: any) => c.work_tabs)
+    .filter((c: any) => tabsById.has(c.work_tab_id))
     .map((c: any) => {
-      const t = c.work_tabs;
+      const t = tabsById.get(c.work_tab_id);
       return {
         tab: {
           id: t.id,
@@ -353,16 +358,21 @@ export async function fetchMyBundleRequests(): Promise
 
   const { data: requests } = await supabase
     .from("bundle_requests")
-    .select("*, bundles(*)")
+    .select("*")
     .eq("user_id", userData.user.id)
     .order("created_at", { ascending: false });
 
-  if (!requests) return [];
+  if (!requests || requests.length === 0) return [];
+
+  const bundleIds = [...new Set(requests.map((r: any) => r.bundle_id))];
+  const { data: bundlesData } = await supabase.from("bundles").select("*").in("id", bundleIds);
+
+  const bundlesById = new Map((bundlesData ?? []).map((b: any) => [b.id, b]));
 
   return requests
-    .filter((r: any) => r.bundles)
+    .filter((r: any) => bundlesById.has(r.bundle_id))
     .map((r: any) => {
-      const b = r.bundles;
+      const b = bundlesById.get(r.bundle_id);
       return {
         bundle: {
           id: b.id,
