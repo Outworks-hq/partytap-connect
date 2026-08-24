@@ -32,14 +32,26 @@ async function verifyStripeSignature(body: string, signature: string, secret: st
 
 Deno.serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
-  const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
   const body = await req.text();
 
-  if (!signature || !webhookSecret) {
+  // Two destinations (v1 + v2 events) means two possible signing secrets.
+  const secrets = [
+    Deno.env.get("STRIPE_WEBHOOK_SECRET"),
+    Deno.env.get("STRIPE_WEBHOOK_SECRET_V1"),
+  ].filter(Boolean) as string[];
+
+  if (!signature || secrets.length === 0) {
     return new Response("Missing signature or secret", { status: 400 });
   }
 
-  const valid = await verifyStripeSignature(body, signature, webhookSecret);
+  let valid = false;
+  for (const secret of secrets) {
+    if (await verifyStripeSignature(body, signature, secret)) {
+      valid = true;
+      break;
+    }
+  }
+
   if (!valid) {
     return new Response("Invalid signature", { status: 400 });
   }
