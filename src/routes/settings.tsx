@@ -46,7 +46,6 @@ function SettingsPage() {
   const [email, setEmail] = useState(account?.email ?? "");
   const [phone, setPhone] = useState(account?.phone ?? "");
   const [avatar, setAvatar] = useState(account?.avatar ?? "");
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
