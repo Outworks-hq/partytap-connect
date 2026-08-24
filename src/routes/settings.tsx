@@ -16,6 +16,7 @@ import {
   setConnection,
   signOutAccount,
   refreshStripeConnectStatus,
+  startAddFunds,
   startStripeConnectOnboarding,
   updateProfile,
   useAccount,
@@ -152,17 +153,7 @@ function SettingsPage() {
           <h2 className="text-sm font-bold text-foreground">
             {context === "business" ? "Business payments" : "Personal payouts"}
           </h2>
-          {context === "business" && (
-            <ConnectionRow
-              icon={CreditCard}
-              label="Payment method"
-              hint="Required to fund paid Work Tabs you create."
-              connected={conn.paymentConnected}
-              onToggle={() =>
-                setConnection("business", "paymentConnected", !conn.paymentConnected)
-              }
-            />
-          )}
+          {context === "business" && <AddFundsSection />}
           <ConnectionRow
             icon={Wallet}
             label="Payout account"
@@ -272,6 +263,54 @@ function ChangePasswordSection() {
         </Button>
       </div>
     </form>
+  );
+}
+
+function AddFundsSection() {
+  const db = useDB();
+  const [amount, setAmount] = useState("50");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    const result = await startAddFunds(Number(amount));
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    window.location.href = result.url;
+  }
+
+  return (
+    <div className="rounded-xl border border-border p-3.5">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent">
+          <CreditCard className="h-4 w-4 text-primary" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">Available balance</p>
+          <p className="text-xs text-muted-foreground">
+            Funds you can release for completed Work Tabs.
+          </p>
+          <p className="mt-1 text-lg font-bold text-primary">{money(db.balance)}</p>
+        </div>
+      </div>
+      <form onSubmit={submit} className="mt-3 flex gap-2">
+        <Input
+          type="number"
+          min="1"
+          step="1"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="max-w-32"
+        />
+        <Button type="submit" size="sm" disabled={submitting}>
+          {submitting ? "Opening…" : "Add funds"}
+        </Button>
+      </form>
+    </div>
   );
 }
 

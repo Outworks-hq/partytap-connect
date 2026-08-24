@@ -53,6 +53,33 @@ Deno.serve(async (req) => {
       "v2.core.account[configuration.recipient].capability_status_updated",
     ];
 
+    // Balance top-up completed via Checkout
+    if (event.type === "checkout.session.completed") {
+      const session = event.data?.object;
+      const userId = session?.metadata?.user_id;
+      const purpose = session?.metadata?.purpose;
+      const amountTotal = Number(session?.amount_total ?? 0) / 100;
+
+      console.log("WEBHOOK topup:", userId, purpose, amountTotal);
+
+      if (userId && purpose === "balance_topup" && amountTotal > 0) {
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("balance")
+          .eq("id", userId)
+          .single();
+
+        const newBalance = Number(profile?.balance ?? 0) + amountTotal;
+
+        await supabaseAdmin
+          .from("profiles")
+          .update({ balance: newBalance })
+          .eq("id", userId);
+
+        console.log("WEBHOOK balance credited:", userId, newBalance);
+      }
+    }
+
     if (accountEventTypes.includes(event.type)) {
       // Thin payloads only reference the object — fetch the full account from Stripe.
       const accountId = event.related_object?.id ?? event.data?.id;

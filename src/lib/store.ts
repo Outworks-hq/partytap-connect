@@ -276,6 +276,31 @@ if (typeof window !== "undefined") {
   });
 }
 
+export async function startAddFunds(
+  amount: number,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return { ok: false, error: "Not signed in." };
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-add-funds`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ amount }),
+    },
+  );
+
+  const result = await response.json();
+  if (!response.ok || !result.url) {
+    return { ok: false, error: result.error ?? "Could not start checkout." };
+  }
+  return { ok: true, url: result.url };
+}
+
 export async function fetchWorkTabById(id: string): Promise<WorkTab | null> {
   const { data: t } = await supabase
     .from("work_tabs")
