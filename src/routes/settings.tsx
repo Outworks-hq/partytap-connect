@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CheckCircle2, CreditCard, KeyRound, LogOut, Wallet, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AccountAvatar } from "@/components/AccountMenu";
 import { AppShell } from "@/components/AppShell";
@@ -15,6 +15,7 @@ import {
   formatDate,
   setConnection,
   signOutAccount,
+  refreshStripeConnectStatus,
   startStripeConnectOnboarding,
   updateProfile,
   useAccount,
@@ -45,6 +46,14 @@ function SettingsPage() {
   const [email, setEmail] = useState(account?.email ?? "");
   const [phone, setPhone] = useState(account?.phone ?? "");
   const [avatar, setAvatar] = useState(account?.avatar ?? "");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "true") {
+      refreshStripeConnectStatus();
+    }
+  }, []);
 
   if (!account) {
     return (
