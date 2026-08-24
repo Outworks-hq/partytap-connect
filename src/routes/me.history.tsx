@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Briefcase, Layers } from "lucide-react";
+import { useEffect, useState } from "react";
 import { MeShell, SignedOutNotice } from "@/components/MeShell";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, money, myBundleRequests, myWork, useAccount, useDB } from "@/lib/store";
+import {
+  fetchMyBundleRequests,
+  fetchMyClaimedWork,
+  formatDate,
+  money,
+  useAccount,
+} from "@/lib/store";
 
 export const Route = createFileRoute("/me/history")({
   head: () => ({
@@ -19,9 +26,49 @@ export const Route = createFileRoute("/me/history")({
   component: MyHistory,
 });
 
+type HistoryRow = {
+  id: string;
+  icon: typeof Briefcase;
+  when: string;
+  title: string;
+  detail: string;
+  status: string;
+};
+
 function MyHistory() {
-  const db = useDB();
   const account = useAccount();
+  const [rows, setRows] = useState<HistoryRow[] | null>(null);
+
+  useEffect(() => {
+    if (!account) return;
+    Promise.all([fetchMyClaimedWork(), fetchMyBundleRequests()]).then(([work, bundles]) => {
+      const combined: HistoryRow[] = [
+        ...work.map(({ tab, claim }) => ({
+          id: `w-${tab.id}-${claim.id}`,
+          icon: Briefcase,
+          when: claim.acceptedAt,
+          title: tab.title,
+          detail: `Work Tab · ${money(tab.pay)}`,
+          status:
+            claim.status === "paid"
+              ? "Paid"
+              : claim.status === "submitted"
+                ? "Submitted"
+                : "Accepted",
+        })),
+        ...bundles.map(({ bundle, request }) => ({
+          id: `b-${request.id}`,
+          icon: Layers,
+          when: request.createdAt,
+          title: bundle.title,
+          detail: `Bundle · ${bundle.businessA.name} + ${bundle.businessB.name}`,
+          status: request.status === "scheduled" ? "Scheduled" : "Requested",
+        })),
+      ].sort((a, b) => b.when.localeCompare(a.when));
+      setRows(combined);
+    });
+  }, [account]);
+
   if (!account) {
     return (
       <MeShell title="History">
@@ -30,25 +77,13 @@ function MyHistory() {
     );
   }
 
-  const rows = [
-    ...myWork(db, account.id).map(({ tab, claim }) => ({
-      id: `w-${tab.id}-${claim.id}`,
-      icon: Briefcase,
-      when: claim.acceptedAt,
-      title: tab.title,
-      detail: `Work Tab · ${money(tab.pay)}`,
-      status:
-        claim.status === "paid" ? "Paid" : claim.status === "submitted" ? "Submitted" : "Accepted",
-    })),
-    ...myBundleRequests(db, account.id).map(({ bundle, request }) => ({
-      id: `b-${request.id}`,
-      icon: Layers,
-      when: request.createdAt,
-      title: bundle.title,
-      detail: `Bundle · ${bundle.businessA.name} + ${bundle.businessB.name}`,
-      status: request.status === "scheduled" ? "Scheduled" : "Requested",
-    })),
-  ].sort((a, b) => b.when.localeCompare(a.when));
+  if (rows === null) {
+    return (
+      <MeShell title="History" subtitle="Your PartyTap activity">
+        <div className="card-soft p-8 text-center text-sm text-muted-foreground">Loading…</div>
+      </MeShell>
+    );
+  }
 
   return (
     <MeShell title="History" subtitle="Your PartyTap activity">

@@ -302,6 +302,93 @@ export async function verifyPendingTopups(): Promise<number> {
   return credited;
 }
 
+export async function fetchMyClaimedWork(): Promise<Array<{ tab: WorkTab; claim: Claim }>> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return [];
+
+  const { data: claims } = await supabase
+    .from("work_tab_claims")
+    .select("*, work_tabs(*)")
+    .eq("user_id", userData.user.id)
+    .order("accepted_at", { ascending: false });
+
+  if (!claims) return [];
+
+  return claims
+    .filter((c: any) => c.work_tabs)
+    .map((c: any) => {
+      const t = c.work_tabs;
+      return {
+        tab: {
+          id: t.id,
+          title: t.title,
+          description: t.description ?? "",
+          pay: Number(t.pay),
+          deadline: t.deadline ?? "",
+          slots: t.slots,
+          details: t.details ?? [],
+          payoutSource: t.payout_source ?? "",
+          createdAt: t.created_at,
+          claims: [],
+        } as WorkTab,
+        claim: {
+          id: c.id,
+          userId: c.user_id ?? undefined,
+          name: c.name,
+          contact: c.contact,
+          status: c.status,
+          note: c.note ?? undefined,
+          acceptedAt: c.accepted_at,
+          submittedAt: c.submitted_at ?? undefined,
+        } as Claim,
+      };
+    });
+}
+
+export async function fetchMyBundleRequests(): Promise
+  Array<{ bundle: BundleTab; request: BundleRequest }>
+> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return [];
+
+  const { data: requests } = await supabase
+    .from("bundle_requests")
+    .select("*, bundles(*)")
+    .eq("user_id", userData.user.id)
+    .order("created_at", { ascending: false });
+
+  if (!requests) return [];
+
+  return requests
+    .filter((r: any) => r.bundles)
+    .map((r: any) => {
+      const b = r.bundles;
+      return {
+        bundle: {
+          id: b.id,
+          title: b.title,
+          description: b.description ?? "",
+          businessA: { name: b.business_a_name, service: b.business_a_service },
+          businessB: { name: b.business_b_name, service: b.business_b_service },
+          createdAt: b.created_at,
+          requests: [],
+        } as BundleTab,
+        request: {
+          id: r.id,
+          userId: r.user_id ?? undefined,
+          name: r.name,
+          phone: r.phone ?? "",
+          address: r.address ?? "",
+          date: r.date ?? "",
+          time: r.time ?? "",
+          notes: r.notes ?? undefined,
+          createdAt: r.created_at,
+          status: r.status,
+        } as BundleRequest,
+      };
+    });
+}
+
 export async function startAddFunds(
   amount: number,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {

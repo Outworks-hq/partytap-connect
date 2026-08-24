@@ -1,7 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { MeShell, SignedOutNotice } from "@/components/MeShell";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, money, myWork, useAccount, useDB } from "@/lib/store";
+import {
+  fetchMyClaimedWork,
+  formatDate,
+  money,
+  useAccount,
+  type Claim,
+  type WorkTab,
+} from "@/lib/store";
+import { calculateNetPayout } from "@/lib/config";
 
 export const Route = createFileRoute("/me/work")({
   head: () => ({
@@ -9,7 +18,8 @@ export const Route = createFileRoute("/me/work")({
       { title: "My Work — PartyTap" },
       {
         name: "description",
-        content: "Work Tabs you accepted: unlocked details, submission status, and payouts.",
+        content:
+          "Work Tabs you accepted: unlocked details, submission status, and payouts.",
       },
       { property: "og:title", content: "My Work — PartyTap" },
       { property: "og:description", content: "Track the Work Tabs you accepted." },
@@ -21,8 +31,14 @@ export const Route = createFileRoute("/me/work")({
 const label = { accepted: "Accepted", submitted: "Submitted", paid: "Paid" } as const;
 
 function MyWork() {
-  const db = useDB();
   const account = useAccount();
+  const [rows, setRows] = useState<Array<{ tab: WorkTab; claim: Claim }> | null>(null);
+
+  useEffect(() => {
+    if (!account) return;
+    fetchMyClaimedWork().then(setRows);
+  }, [account]);
+
   if (!account) {
     return (
       <MeShell title="My Work">
@@ -30,14 +46,21 @@ function MyWork() {
       </MeShell>
     );
   }
-  const rows = myWork(db, account.id);
+
+  if (rows === null) {
+    return (
+      <MeShell title="My Work" subtitle="Work Tabs you accepted">
+        <div className="card-soft p-8 text-center text-sm text-muted-foreground">Loading…</div>
+      </MeShell>
+    );
+  }
 
   return (
     <MeShell title="My Work" subtitle="Work Tabs you accepted">
       <div className="space-y-3">
         {rows.map(({ tab, claim }) => (
           <Link
-            key={tab.id}
+            key={claim.id}
             to="/t/$id"
             params={{ id: tab.id }}
             className="card-soft block p-4 transition-shadow hover:shadow-lg"
@@ -50,7 +73,16 @@ function MyWork() {
             </div>
             <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{tab.description}</p>
             <div className="mt-3 flex items-end justify-between">
-              <p className="text-xl font-extrabold text-primary">{money(tab.pay)}</p>
+              <div>
+                <p className="text-xl font-extrabold text-primary">
+                  {money(claim.status === "paid" ? calculateNetPayout(tab.pay) : tab.pay)}
+                </p>
+                {claim.status === "paid" && (
+                  <p className="text-xs text-muted-foreground">
+                    received · {money(tab.pay)} before fee
+                  </p>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Due {formatDate(tab.deadline)} · accepted {formatDate(claim.acceptedAt)}
               </p>

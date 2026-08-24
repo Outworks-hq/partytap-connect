@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, Clock, MapPin, Phone } from "lucide-react";
+import { useEffect, useState } from "react";
 import { MeShell, SignedOutNotice } from "@/components/MeShell";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, myBundleRequests, useAccount, useDB } from "@/lib/store";
+import {
+  fetchMyBundleRequests,
+  formatDate,
+  useAccount,
+  type BundleRequest,
+  type BundleTab,
+} from "@/lib/store";
 
 export const Route = createFileRoute("/me/bundles")({
   head: () => ({
@@ -20,8 +27,16 @@ export const Route = createFileRoute("/me/bundles")({
 });
 
 function MyBundles() {
-  const db = useDB();
   const account = useAccount();
+  const [rows, setRows] = useState<Array<{ bundle: BundleTab; request: BundleRequest }> | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!account) return;
+    fetchMyBundleRequests().then(setRows);
+  }, [account]);
+
   if (!account) {
     return (
       <MeShell title="My Bundles">
@@ -29,7 +44,14 @@ function MyBundles() {
       </MeShell>
     );
   }
-  const rows = myBundleRequests(db, account.id);
+
+  if (rows === null) {
+    return (
+      <MeShell title="My Bundles" subtitle="Bundle requests you confirmed">
+        <div className="card-soft p-8 text-center text-sm text-muted-foreground">Loading…</div>
+      </MeShell>
+    );
+  }
 
   return (
     <MeShell title="My Bundles" subtitle="Bundle requests you confirmed">
