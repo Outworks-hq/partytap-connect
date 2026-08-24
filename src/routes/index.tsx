@@ -80,7 +80,7 @@ function Landing() {
           icon={Briefcase}
           eyebrow="Feature 1"
           title="PartyTap Work"
-          body="Create a Work Tab with a public offer, private details that unlock only after someone accepts, and a demo payout you release when the work checks out."
+          body="Create a Work Tab with a public offer, private details that unlock only after someone accepts, and a payout you release when the work checks out."
           points={[
             "Public offer: task, pay, deadline, slots",
             "Accepted details stay locked until claim",
@@ -119,7 +119,7 @@ function Landing() {
           </div>
         </div>
         <p className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <Lock className="h-3.5 w-3.5" /> Demo payment states only in this build.
+          <Lock className="h-3.5 w-3.5" /> Secure payments powered by Stripe.
         </p>
       </section>
     </div>

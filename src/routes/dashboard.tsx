@@ -24,7 +24,7 @@ export const Route = createFileRoute("/dashboard")({
       { title: "Dashboard — PartyTap" },
       {
         name: "description",
-        content: "Manage your PartyTap Work Tabs, Bundle Tabs, and demo payouts in one place.",
+        content: "Manage your PartyTap Work Tabs, Bundle Tabs, and payouts in one place.",
       },
       { property: "og:title", content: "Dashboard — PartyTap" },
       { property: "og:description", content: "Manage Work Tabs, Bundle Tabs, and payouts." },

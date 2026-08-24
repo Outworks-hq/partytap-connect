@@ -23,7 +23,7 @@ export function GuestShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-2xl px-4 py-6 pb-16">{children}</main>
       <footer className="mx-auto flex max-w-2xl items-center justify-center gap-2 pb-10 text-xs text-muted-foreground">
         <Lock className="h-3.5 w-3.5" />
-        Demo payments — powered by PartyTap
+        Secure payments — powered by PartyTap
       </footer>
     </div>
   );

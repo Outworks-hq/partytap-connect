@@ -28,7 +28,7 @@ export const Route = createFileRoute("/work/new")({
       {
         name: "description",
         content:
-          "Post a paid task: public offer, private details that unlock on accept, and a demo payout you release.",
+          "Post a paid task: public offer, private details that unlock on accept, and a payout you release.",
       },
       { property: "og:title", content: "Create a Work Tab — PartyTap Work" },
       { property: "og:description", content: "Post work and pay when it's done." },
@@ -168,11 +168,11 @@ function CreateWorkTab() {
           <div className="rounded-xl border border-border p-4">
             <p className="text-xs text-muted-foreground">Payout From</p>
             <p className="text-sm font-semibold text-foreground">Main Balance</p>
-            <p className="text-xs text-muted-foreground">{money(db.balance)} available (demo)</p>
+            <p className="text-xs text-muted-foreground">{money(db.balance)} available</p>
           </div>
           <div className="rounded-xl bg-accent p-4 text-sm text-accent-foreground">
             You'll review the work outside PartyTap. When it's good, come back and release
-            payment. Payments are demo-only in this build.
+            payment.
           </div>
           <Button type="submit" className="w-full" size="lg">
             Create Work Tab

@@ -23,7 +23,7 @@ export const Route = createFileRoute("/work/")({
       { title: "PartyTap Work — Work Tabs" },
       {
         name: "description",
-        content: "Every Work Tab you've created: pay, deadline, claims and demo payout state.",
+        content: "Every Work Tab you've created: pay, deadline, claims and payout state.",
       },
       { property: "og:title", content: "PartyTap Work — Work Tabs" },
       { property: "og:description", content: "Every paid Work Tab you've created." },
