@@ -51,6 +51,23 @@ Deno.serve(async (req) => {
     if (claim.status === "paid") return json({ error: "Already paid" }, 400);
     if (!claim.user_id) return json({ error: "Claim has no recipient" }, 400);
 
+    // Claim this release atomically — only one concurrent request can win.
+    const adminClaim = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: claimed } = await adminClaim
+      .from("work_tab_claims")
+      .update({ status: "paid" })
+      .eq("id", claimId)
+      .neq("status", "paid")
+      .select("id");
+
+    if (!claimed || claimed.length === 0) {
+      return json({ error: "This payment is already being processed." }, 409);
+    }
+
     // Recipient must have completed Stripe Connect onboarding.
     // Use service role: the caller is the business owner (verified above) and
     // can't read another user's profile row under RLS.
@@ -80,6 +97,25 @@ Deno.serve(async (req) => {
     const platformFee = Math.round(gross * (PLATFORM_FEE_PERCENT / 100) * 100) / 100;
     const net = Math.round((gross - platformFee) * 100) / 100;
     const netCents = Math.round(net * 100);
+    // The business must have enough funded balance to cover the full amount
+    const adminBalance = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: businessProfile } = await adminBalance
+      .from("profiles")
+      .select("balance")
+      .eq("id", userData.user.id)
+      .single();
+
+    const currentBalance = Number(businessProfile?.balance ?? 0);
+    if (currentBalance < gross) {
+      return json(
+        { error: `Insufficient balance. You have $${currentBalance.toFixed(2)}, this release needs $${gross.toFixed(2)}. Add funds first.` },
+        400,
+      );
+    }
 
     // Create the Stripe transfer to the connected account
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY")!;
@@ -120,9 +156,15 @@ Deno.serve(async (req) => {
       status: "paid",
     });
 
-    await admin.from("work_tab_claims").update({ status: "paid" }).eq("id", claim.id);
+
+    // Deduct the full gross amount from the business balance
+    await admin
+      .from("profiles")
+      .update({ balance: Math.round((currentBalance - gross) * 100) / 100 })
+      .eq("id", userData.user.id);
 
     return json({ ok: true, transferId: transfer.id, net, platformFee });
+
   } catch (error) {
     return json({ error: (error as Error).message }, 500);
   }

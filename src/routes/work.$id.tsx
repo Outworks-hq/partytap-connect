@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { accountSides, formatDate, getAuthedAccount, money, refreshBusinessData, releaseWorkTabPayment, useDB, workStatus } from "@/lib/store";
 import { calculateNetPayout, calculatePlatformFee } from "@/lib/config";
+import { useState } from "react";
 
 export const Route = createFileRoute("/work/$id")({
   beforeLoad: async ({ location }) => {
@@ -35,6 +36,7 @@ function WorkDetail() {
   const { id } = Route.useParams();
   const db = useDB();
   const tab = db.workTabs.find((t) => t.id === id);
+  const [releasing, setReleasing] = useState<string | null>(null);
 
   if (!tab) {
     return (
@@ -47,7 +49,10 @@ function WorkDetail() {
   }
 
   async function release(claimId: string) {
+    if (releasing) return;
+    setReleasing(claimId);
     const result = await releaseWorkTabPayment(claimId, tab?.pay ?? 0);
+    setReleasing(null);
     if (!result.ok) {
       toast.error(result.error);
       return;
@@ -127,8 +132,13 @@ function WorkDetail() {
                 </div>
               ) : (
                 <div className="mt-3">
-                  <Button className="w-full" size="sm" onClick={() => release(c.id)}>
-                    Release payment ({money(tab.pay)})
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    disabled={releasing !== null}
+                    onClick={() => release(c.id)}
+                  >
+                    {releasing === c.id ? "Releasing…" : `Release payment (${money(tab.pay)})`}
                   </Button>
                   <p className="mt-1.5 text-center text-xs text-muted-foreground">
                     {money(calculateNetPayout(tab.pay))} to recipient ·{" "}
