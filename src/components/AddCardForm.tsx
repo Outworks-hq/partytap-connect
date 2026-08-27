@@ -34,7 +34,13 @@ function CardFields({ onSaved }: { onSaved: () => void }) {
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <PaymentElement />
+      <PaymentElement
+        onLoadError={(event) => {
+          console.error("STRIPE PaymentElement loadError:", JSON.stringify(event));
+          toast.error(event.error?.message ?? "Could not load card form.");
+        }}
+        onReady={() => console.log("STRIPE PaymentElement ready")}
+      />
       <Button type="submit" className="w-full" disabled={!stripe || submitting}>
         {submitting ? "Saving…" : "Save card"}
       </Button>
