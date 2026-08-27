@@ -1,3 +1,4 @@
+import { AddCardForm } from "@/components/AddCardForm";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CheckCircle2, CreditCard, KeyRound, LogOut, Wallet, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -18,6 +19,8 @@ import {
   signOutAccount,
   refreshStripeConnectStatus,
   startAddFunds,
+  fetchSavedCards,
+  type SavedCard,
   startStripeConnectOnboarding,
   updateProfile,
   useAccount,
@@ -269,21 +272,16 @@ function ChangePasswordSection() {
 }
 
 function AddFundsSection() {
-  const db = useDB();
-  const [amount, setAmount] = useState("50");
-  const [submitting, setSubmitting] = useState(false);
+  const [cards, setCards] = useState<SavedCard[] | null>(null);
+  const [adding, setAdding] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    const result = await startAddFunds(Number(amount));
-    setSubmitting(false);
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
-    }
-    window.location.href = result.url;
+  function load() {
+    fetchSavedCards().then(setCards);
   }
+
+  useEffect(() => {
+    load();
+  }, []);
 
   return (
     <div className="rounded-xl border border-border p-3.5">
@@ -292,26 +290,61 @@ function AddFundsSection() {
           <CreditCard className="h-4 w-4 text-primary" />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">Available balance</p>
+          <p className="text-sm font-semibold text-foreground">Payment method</p>
           <p className="text-xs text-muted-foreground">
-            Funds you can release for completed Work Tabs.
+            Used to pay for Work Tabs when you release payment.
           </p>
-          <p className="mt-1 text-lg font-bold text-primary">{money(db.balance)}</p>
         </div>
       </div>
-      <form onSubmit={submit} className="mt-3 flex gap-2">
-        <Input
-          type="number"
-          min="1"
-          step="1"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="max-w-32"
-        />
-        <Button type="submit" size="sm" disabled={submitting}>
-          {submitting ? "Opening…" : "Add funds"}
+
+      {cards === null && (
+        <p className="mt-3 text-xs text-muted-foreground">Loading…</p>
+      )}
+
+      {cards && cards.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {cards.map((card) => (
+            <li
+              key={card.id}
+              className="flex items-center justify-between rounded-xl border border-border p-3"
+            >
+              <span className="text-sm font-medium text-foreground capitalize">
+                {card.brand} •••• {card.last4}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {card.expMonth}/{card.expYear}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {cards && cards.length === 0 && !adding && (
+        <p className="mt-3 text-xs text-muted-foreground">No card on file yet.</p>
+      )}
+
+      {adding ? (
+        <div className="mt-3">
+          <AddCardForm
+            onSaved={() => {
+              setAdding(false);
+              load();
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2 w-full"
+            onClick={() => setAdding(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <Button size="sm" className="mt-3" onClick={() => setAdding(true)}>
+          {cards && cards.length > 0 ? "Add another card" : "Add a card"}
         </Button>
-      </form>
+      )}
     </div>
   );
 }

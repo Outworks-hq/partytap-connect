@@ -97,22 +97,63 @@ Deno.serve(async (req) => {
     const platformFee = Math.round(gross * (PLATFORM_FEE_PERCENT / 100) * 100) / 100;
     const net = Math.round((gross - platformFee) * 100) / 100;
     const netCents = Math.round(net * 100);
-    // The business must have enough funded balance to cover the full amount
-    const adminBalance = createClient(
+
+    // Charge the business's saved card for the full amount
+    const adminCharge = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: businessProfile } = await adminBalance
+    const { data: businessProfile } = await adminCharge
       .from("profiles")
-      .select("balance")
+      .select("stripe_customer_id")
       .eq("id", userData.user.id)
       .single();
 
-    const currentBalance = Number(businessProfile?.balance ?? 0);
-    if (currentBalance < gross) {
+    if (!businessProfile?.stripe_customer_id) {
+      return json({ error: "Add a payment method before releasing payment." }, 400);
+    }
+
+    // Find their saved card
+    const pmRes = await fetch(
+      `https://api.stripe.com/v1/payment_methods?customer=${businessProfile.stripe_customer_id}&type=card&limit=1`,
+      { headers: { Authorization: `Bearer ${Deno.env.get("STRIPE_SECRET_KEY")!}` } },
+    );
+    const pms = await pmRes.json();
+    const paymentMethodId = pms.data?.[0]?.id;
+
+    if (!paymentMethodId) {
+      return json({ error: "Add a payment method before releasing payment." }, 400);
+    }
+
+    // Charge it (off-session, since the card was saved earlier)
+    const chargeRes = await fetch("https://api.stripe.com/v1/payment_intents", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${Deno.env.get("STRIPE_SECRET_KEY")!}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        amount: String(Math.round(gross * 100)),
+        currency: "usd",
+        customer: businessProfile.stripe_customer_id,
+        payment_method: paymentMethodId,
+        off_session: "true",
+        confirm: "true",
+        "metadata[work_tab_id]": workTab.id,
+        "metadata[claim_id]": claim.id,
+      }).toString(),
+    });
+
+    const charge = await chargeRes.json();
+    if (!chargeRes.ok || charge.status !== "succeeded") {
+      // Roll the claim back so it can be retried
+      await adminCharge
+        .from("work_tab_claims")
+        .update({ status: "submitted" })
+        .eq("id", claimId);
       return json(
-        { error: `Insufficient balance. You have $${currentBalance.toFixed(2)}, this release needs $${gross.toFixed(2)}. Add funds first.` },
+        { error: charge.error?.message ?? "Card payment failed. Check your payment method." },
         400,
       );
     }
@@ -156,15 +197,7 @@ Deno.serve(async (req) => {
       status: "paid",
     });
 
-
-    // Deduct the full gross amount from the business balance
-    await admin
-      .from("profiles")
-      .update({ balance: Math.round((currentBalance - gross) * 100) / 100 })
-      .eq("id", userData.user.id);
-
     return json({ ok: true, transferId: transfer.id, net, platformFee });
-
   } catch (error) {
     return json({ error: (error as Error).message }, 500);
   }

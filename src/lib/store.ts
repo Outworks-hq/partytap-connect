@@ -564,6 +564,58 @@ export async function fetchBundleById(id: string): Promise<BundleTab | null> {
   };
 }
 
+
+export type SavedCard = {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth?: number;
+  expYear?: number;
+};
+
+export async function startSaveCard(): Promise<
+  { ok: true; clientSecret: string } | { ok: false; error: string }
+> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return { ok: false, error: "Not signed in." };
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-save-card`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  const result = await response.json();
+  if (!response.ok || !result.clientSecret) {
+    return { ok: false, error: result.error ?? "Could not start card setup." };
+  }
+  return { ok: true, clientSecret: result.clientSecret };
+}
+
+export async function fetchSavedCards(): Promise<SavedCard[]> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return [];
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-list-cards`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  const result = await response.json();
+  return result?.cards ?? [];
+}
+
 export async function createBundleRequest(payload: {
   bundleId: string;
   userId: string;
