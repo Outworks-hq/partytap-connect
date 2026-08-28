@@ -54,10 +54,10 @@ function SettingsPage() {
   const [avatar, setAvatar] = useState(account?.avatar ?? "");
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("connected") === "true") {
-      refreshStripeConnectStatus();
-    }
+    // Sync payout status on every visit. Embedded onboarding has no redirect
+    // to hook into, and the component's onExit can be missed (a dropped
+    // connection, a closed tab), so re-checking here keeps the status honest.
+    refreshStripeConnectStatus();
   }, []);
 
   if (!account) {
