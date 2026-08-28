@@ -18,7 +18,6 @@ import {
   setConnection,
   signOutAccount,
   refreshStripeConnectStatus,
-  startAddFunds,
   fetchSavedCards,
   type SavedCard,
   startStripeConnectOnboarding,
@@ -46,6 +45,7 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const account = useAccount();
+  const [connecting, setConnecting] = useState(false);
   const context = useActiveContext();
   const navigate = useNavigate();
   const [name, setName] = useState(account?.name ?? "");
@@ -158,7 +158,7 @@ function SettingsPage() {
           <h2 className="text-sm font-bold text-foreground">
             {context === "business" ? "Business payments" : "Personal payouts"}
           </h2>
-          {context === "business" && <AddFundsSection />}
+          {context === "business" && <PaymentMethodSection />}
           <ConnectionRow
             icon={Wallet}
             label="Payout account"
@@ -168,8 +168,12 @@ function SettingsPage() {
                 : "Required before you can receive payment for accepted Work Tabs."
             }
             connected={conn.payoutConnected}
+            busy={connecting}
             onToggle={async () => {
+              if (connecting) return;
+              setConnecting(true);
               const result = await startStripeConnectOnboarding();
+              if (!result.ok) setConnecting(false);
               if (!result.ok) {
                 toast.error(result.error);
                 return;
@@ -271,7 +275,7 @@ function ChangePasswordSection() {
   );
 }
 
-function AddFundsSection() {
+function PaymentMethodSection() {
   const [cards, setCards] = useState<SavedCard[] | null>(null);
   const [adding, setAdding] = useState(false);
 
@@ -355,12 +359,14 @@ function ConnectionRow({
   hint,
   connected,
   onToggle,
+  busy = false,
 }: {
   icon: typeof Wallet;
   label: string;
   hint: string;
   connected: boolean;
   onToggle: () => void;
+  busy?: boolean;
 }) {
   return (
     <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-border p-3.5">
@@ -381,8 +387,13 @@ function ConnectionRow({
           {connected ? "Connected" : "Not connected"}
         </p>
       </div>
-      <Button size="sm" variant={connected ? "outline" : "default"} onClick={onToggle}>
-        {connected ? "Manage" : "Connect"}
+      <Button
+        size="sm"
+        variant={connected ? "outline" : "default"}
+        onClick={onToggle}
+        disabled={busy}
+      >
+        {busy ? "Opening…" : connected ? "Manage" : "Connect"}
       </Button>
     </div>
   );

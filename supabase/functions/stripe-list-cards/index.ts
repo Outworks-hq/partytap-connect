@@ -59,6 +59,12 @@ Deno.serve(async (req) => {
       expYear: pm.card?.exp_year,
     }));
 
+    // Keep the payment-connected flag in sync with whether a card actually exists
+    await admin
+      .from("profiles")
+      .update({ business_payment_connected: cards.length > 0 })
+      .eq("id", userData.user.id);
+
     return json({ cards });
   } catch (error) {
     return json({ error: (error as Error).message }, 500);

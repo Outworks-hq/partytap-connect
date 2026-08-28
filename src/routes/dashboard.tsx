@@ -40,6 +40,9 @@ function Dashboard() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("funded") === "true") {
+      // Dormant: the prepaid balance UI was removed, so no new top-ups are
+      // started. Kept because prepaid accounts are planned to return as an
+      // optional lower-fee tier.
       verifyPendingTopups().then((credited) => {
         if (credited > 0) refreshBusinessData();
       });

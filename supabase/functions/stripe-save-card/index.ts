@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
         .eq("id", userData.user.id);
     }
 
+
     // SetupIntent lets us collect and save a card without charging it
     const setupRes = await fetch("https://api.stripe.com/v1/setup_intents", {
       method: "POST",
