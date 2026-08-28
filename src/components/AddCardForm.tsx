@@ -68,7 +68,7 @@ export function AddCardForm({ onSaved }: { onSaved: () => void }) {
   }
 
   return (
-    <Elements stripe={stripePromise} options={{ clientSecret }}>
+    <Elements stripe={stripePromise} options={{ clientSecret, locale: "en" }}>
       <CardFields onSaved={onSaved} />
     </Elements>
   );
