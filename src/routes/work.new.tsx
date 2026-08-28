@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { accountSides, getAuthedAccount, money, refreshBusinessData, uid, update, useDB, type DetailItem } from "@/lib/store";
+import { accountSides, getAuthedAccount, refreshBusinessData, uid, update, type DetailItem } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/work/new")({
@@ -38,7 +38,6 @@ export const Route = createFileRoute("/work/new")({
 });
 
 function CreateWorkTab() {
-  const db = useDB();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -166,9 +165,11 @@ function CreateWorkTab() {
 
         <Section step={3} icon={Wallet} title="Payout & release" hint="You decide when to pay.">
           <div className="rounded-xl border border-border p-4">
-            <p className="text-xs text-muted-foreground">Payout From</p>
-            <p className="text-sm font-semibold text-foreground">Main Balance</p>
-            <p className="text-xs text-muted-foreground">{money(db.balance)} available</p>
+            <p className="text-xs text-muted-foreground">Paid with</p>
+            <p className="text-sm font-semibold text-foreground">Your saved card</p>
+            <p className="text-xs text-muted-foreground">
+              Charged when you release payment
+            </p>
           </div>
           <div className="rounded-xl bg-accent p-4 text-sm text-accent-foreground">
             You'll review the work outside PartyTap. When it's good, come back and release

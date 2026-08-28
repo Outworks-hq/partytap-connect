@@ -10,7 +10,7 @@ import { useEffect, type ReactNode } from "react";
 import { Logo } from "./Logo";
 import { ContextSwitch } from "./ContextSwitch";
 import { AccountMenu } from "./AccountMenu";
-import { useDB, money, useAccount, connectionState, hasSide } from "@/lib/store";
+import { useDB, useAccount, connectionState, hasSide } from "@/lib/store";
 
 const businessNav = [
   { to: "/dashboard", label: "Dashboard", short: "Dashboard", icon: LayoutDashboard },
@@ -86,9 +86,7 @@ export function AppShell({
           </div>
         ) : (
           <div className="rounded-xl bg-sidebar-accent p-4 text-sidebar-foreground">
-            <p className="text-xs text-sidebar-foreground/60">Available Balance</p>
-            <p className="mt-1 text-2xl font-bold">{money(db.balance)}</p>
-            <p className="mt-3 text-xs text-sidebar-foreground/60">Payment Method</p>
+            <p className="text-xs text-sidebar-foreground/60">Payment Method</p>
             <Link
               to="/settings"
               className={`mt-1 flex items-center gap-1.5 text-sm font-medium ${connections.paymentConnected ? "text-success" : "text-sidebar-foreground/80 underline"}`}

@@ -63,7 +63,15 @@ function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat icon={Briefcase} label="Active Work Tabs" value={String(openTabs.length)} />
         <Stat icon={Users} label="Bundle requests" value={String(requests.length)} />
-        <Stat icon={Wallet} label="Available balance" value={money(db.balance)} />
+        <Stat
+          icon={Wallet}
+          label="Paid out"
+          value={money(
+            db.workTabs
+              .flatMap((t) => t.claims.filter((c) => c.status === "paid").map(() => t.pay))
+              .reduce((sum, pay) => sum + pay, 0),
+          )}
+        />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
