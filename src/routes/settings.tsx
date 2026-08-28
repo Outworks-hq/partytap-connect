@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmbeddedPayoutOnboarding } from "@/components/EmbeddedPayoutOnboarding";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import {
@@ -20,7 +21,6 @@ import {
   refreshStripeConnectStatus,
   fetchSavedCards,
   type SavedCard,
-  startStripeConnectOnboarding,
   updateProfile,
   useAccount,
   useDB,
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const account = useAccount();
-  const [connecting, setConnecting] = useState(false);
+  const [showPayoutOnboarding, setShowPayoutOnboarding] = useState(false);  
   const context = useActiveContext();
   const navigate = useNavigate();
   const [name, setName] = useState(account?.name ?? "");
@@ -168,19 +168,19 @@ function SettingsPage() {
                 : "Required before you can receive payment for accepted Work Tabs."
             }
             connected={conn.payoutConnected}
-            busy={connecting}
-            onToggle={async () => {
-              if (connecting) return;
-              setConnecting(true);
-              const result = await startStripeConnectOnboarding();
-              if (!result.ok) setConnecting(false);
-              if (!result.ok) {
-                toast.error(result.error);
-                return;
-              }
-              window.location.href = result.url;
-            }}
+            onToggle={() => setShowPayoutOnboarding((open) => !open)}
           />
+          {showPayoutOnboarding && (
+            <div className="rounded-xl border border-border p-3.5">
+              <EmbeddedPayoutOnboarding
+                onExit={async () => {
+                  setShowPayoutOnboarding(false);
+                  await refreshStripeConnectStatus();
+                  toast.success("Payout setup updated");
+                }}
+              />
+            </div>
+          )}
         </section>
 
         <ChangePasswordSection />

@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY")!;
 
     // ---------------------------------------------------------------
-    // 1. VALIDATION — every check happens before the claim is locked,
+    // 1. VALIDATION - every check happens before the claim is locked,
     //    so a failed release always leaves the claim reusable.
     // ---------------------------------------------------------------
 
@@ -63,8 +63,8 @@ Deno.serve(async (req) => {
     if (!claim.user_id) return json({ error: "Claim has no recipient" }, 400);
 
     // Recipient must have completed Stripe Connect onboarding.
-    // Service role is needed: the business owner can't read another user's
-    // profile row under RLS.
+    // Service role is needed: the business owner cannot read another
+    // user's profile row under RLS.
     const { data: recipient } = await admin
       .from("profiles")
       .select("stripe_connect_account_id")
@@ -100,12 +100,11 @@ Deno.serve(async (req) => {
     const gross = Number(workTab.pay);
     const platformFee = Math.round(gross * (PLATFORM_FEE_PERCENT / 100) * 100) / 100;
     const net = Math.round((gross - platformFee) * 100) / 100;
-    const netCents = Math.round(net * 100);
 
     // ---------------------------------------------------------------
-    // 2. LOCK — mark the claim paid atomically. Only one concurrent
-    //    request can win, which prevents double charges and double
-    //    transfers. Everything after this rolls back on failure.
+    // 2. LOCK - mark the claim paid atomically. Only one concurrent
+    //    request can win, which prevents double charges.
+    //    Everything after this rolls back on failure.
     // ---------------------------------------------------------------
 
     const { data: locked } = await admin
@@ -124,7 +123,13 @@ Deno.serve(async (req) => {
     };
 
     // ---------------------------------------------------------------
-    // 3. CHARGE the business's saved card (off-session).
+    // 3. CHARGE the business's saved card as a destination charge.
+    //
+    //    Stripe splits the payment in one step: the net amount goes to
+    //    the recipient's connected account and the platform fee stays
+    //    with us. This avoids a separate transfer, which would require
+    //    the platform to hold a settled available balance - card funds
+    //    stay pending for days after a charge.
     // ---------------------------------------------------------------
 
     const chargeRes = await fetch("https://api.stripe.com/v1/payment_intents", {
@@ -140,6 +145,8 @@ Deno.serve(async (req) => {
         payment_method: paymentMethodId,
         off_session: "true",
         confirm: "true",
+        "transfer_data[destination]": recipient.stripe_connect_account_id,
+        application_fee_amount: String(Math.round(platformFee * 100)),
         "metadata[work_tab_id]": workTab.id,
         "metadata[claim_id]": claim.id,
       }).toString(),
@@ -155,54 +162,19 @@ Deno.serve(async (req) => {
     }
 
     // ---------------------------------------------------------------
-    // 4. TRANSFER the net amount to the recipient's connected account.
-    // ---------------------------------------------------------------
-
-    const transferRes = await fetch("https://api.stripe.com/v1/transfers", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${stripeKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        amount: String(netCents),
-        currency: "usd",
-        destination: recipient.stripe_connect_account_id,
-        "metadata[claim_id]": claim.id,
-        "metadata[work_tab_id]": workTab.id,
-      }).toString(),
-    });
-
-    const transfer = await transferRes.json();
-    if (!transferRes.ok) {
-      // The card was charged but the transfer failed. Refund so the
-      // business isn't left paying for work the recipient wasn't paid for.
-      await fetch("https://api.stripe.com/v1/refunds", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${stripeKey}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({ payment_intent: charge.id }).toString(),
-      });
-      await rollback();
-      return json({ error: transfer.error?.message ?? "Transfer failed. Payment refunded." }, 500);
-    }
-
-    // ---------------------------------------------------------------
-    // 5. RECORD the payout.
+    // 4. RECORD the payout.
     // ---------------------------------------------------------------
 
     await admin.from("payouts").insert({
       claim_id: claim.id,
       recipient_id: claim.user_id,
-      stripe_transfer_id: transfer.id,
+      stripe_transfer_id: charge.latest_charge ?? charge.id,
       amount: net,
       platform_fee: platformFee,
       status: "paid",
     });
 
-    return json({ ok: true, transferId: transfer.id, net, platformFee });
+    return json({ ok: true, transferId: charge.id, net, platformFee });
   } catch (error) {
     return json({ error: (error as Error).message }, 500);
   }
