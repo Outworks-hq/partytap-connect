@@ -506,8 +506,16 @@ export async function releaseWorkTabPayment(
   return { ok: true };
 }
 
-export async function scheduleBundleRequest(requestId: string) {
-  await supabase.from("bundle_requests").update({ status: "scheduled" }).eq("id", requestId);
+export async function scheduleBundleRequest(
+  requestId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase
+    .from("bundle_requests")
+    .update({ status: "scheduled" })
+    .eq("id", requestId);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export async function refreshStripeConnectStatus(): Promise<boolean> {

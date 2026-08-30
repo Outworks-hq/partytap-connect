@@ -46,7 +46,11 @@ function BundleDetail() {
   }
 
   async function schedule(reqId: string) {
-    await scheduleBundleRequest(reqId);
+    const result = await scheduleBundleRequest(reqId);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
     await refreshBusinessData();
     toast.success("Marked as scheduled");
   }
